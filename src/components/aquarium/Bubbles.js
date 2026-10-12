@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { Animated, Dimensions, Easing, StyleSheet, View } from 'react-native';
 import { COLORS } from '../../constants/theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -74,8 +74,8 @@ export default function Bubbles({ count = 8, region = SCREEN_W }) {
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {bubbles.map((b) => (
-        <Bubble key={b.key} {...b} />
+      {bubbles.map(({key, ...props}) => (
+        <Bubble key={key} {...props} />
       ))}
     </View>
   );
