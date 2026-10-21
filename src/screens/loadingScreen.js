@@ -6,7 +6,7 @@
 //
 // Uses navigation.replace() (not navigate) so this screen is removed from
 // history once it advances — the user can't swipe back or hardware-back
-// into the loader from Join Session.
+// into the loader from Login.
 
 import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -25,7 +25,7 @@ export default function LoadingScreen({ navigation }) {
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
-      navigation?.replace('joinSession');
+      navigation?.replace('login');
     }, AUTO_ADVANCE_MS);
     return () => clearTimeout(timerRef.current);
   }, [navigation]);

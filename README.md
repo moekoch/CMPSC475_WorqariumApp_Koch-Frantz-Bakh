@@ -37,3 +37,14 @@ npx expo start -c
 ```bash
 node server/server.js
 ```
+<br>
+
+> **Expo ESLint & Prettier**
+>
+> - **ESLint:** Identifies potential errors and enforces code quality and consistency.
+> - **Prettier:** Automatically formats code to maintain consistent styling and readability.
+> - **Lint the project:** Run `npx expo lint`.
+> - **Auto-fix issues:** Run `npx expo lint --fix` to automatically resolve supported linting and formatting issues.
+> - **Configuration:** ESLint uses `eslint.config.js` (Expo SDK 53+) or a legacy configuration for older SDKs. Prettier settings can be customized in `.prettierrc`.
+>
+> See the [official Expo ESLint & Prettier guide](https://docs.expo.dev/guides/using-eslint/) for setup and configuration details.

@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 
 const ROUTES: Record<string, string> = {
   loading: '/',
+  login: '/login',
+  register: '/register',
   joinSession: '/join-session',
   activeSession: '/active-session',
   games: '/games',

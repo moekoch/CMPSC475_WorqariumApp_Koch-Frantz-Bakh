@@ -1,6 +1,5 @@
-import React from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../../constants/theme';
 
 const TABS = [
@@ -8,7 +7,7 @@ const TABS = [
   { key: 'Games', icon: 'gamepad-variant', label: 'Games' },
   { key: 'Avatar', icon: 'fish', label: 'My Fish' },
   { key: 'Store', icon: 'treasure-chest', label: 'Store' },
-  { key: 'BotQuery', icon: 'chat-question', label: 'Help' },
+  { key: 'Settings', icon: 'cog', label: 'Settings' },
 ];
 
 /**
