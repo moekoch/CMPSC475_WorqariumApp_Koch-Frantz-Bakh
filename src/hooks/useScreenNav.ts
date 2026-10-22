@@ -19,6 +19,7 @@ const ROUTES: Record<string, string> = {
   joinSession: '/join-session',
   activeSession: '/active-session',
   games: '/games',
+  blackjack: '/blackjack',
   goFish: '/go-fish',
   tictactoe: '/tictactoe',
   avatar: '/avatar',
