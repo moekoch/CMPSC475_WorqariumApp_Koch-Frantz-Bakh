@@ -4,7 +4,7 @@ import { COLORS, FONTS } from '../../constants/theme';
 
 const TABS = [
   { key: 'Home', icon: 'waves', label: 'Reef' },
-  { key: 'Games', icon: 'gamepad-variant', label: 'Games' },
+  { key: 'Games', icon: 'gamepad-variant', label: 'Games', route: 'games' },
   { key: 'Avatar', icon: 'fish', label: 'My Fish' },
   { key: 'Store', icon: 'treasure-chest', label: 'Store' },
   { key: 'Settings', icon: 'cog', label: 'Settings' },
@@ -15,7 +15,7 @@ const TABS = [
  * separates it from the water above, with a small bubble marker over the
  * active tab rather than a generic highlighted pill.
  */
-export default function WorqariumNav({ active, onNavigate }) {
+export default function WorqariumNav({ active, onNavigate, navigation }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.waveTop} />
@@ -23,7 +23,18 @@ export default function WorqariumNav({ active, onNavigate }) {
         {TABS.map((tab) => {
           const isActive = active === tab.key;
           return (
-            <Pressable key={tab.key} onPress={() => onNavigate?.(tab.key)} style={styles.tab} hitSlop={8}>
+            <Pressable
+              key={tab.key}
+              onPress={() => {
+                if (onNavigate) {
+                  onNavigate(tab.key);
+                } else if (tab.route) {
+                  navigation?.navigate(tab.route);
+                }
+              }}
+              style={styles.tab}
+              hitSlop={8}
+            >
               {isActive && <View style={styles.marker} />}
               <MaterialCommunityIcons
                 name={tab.icon}
