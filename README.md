@@ -28,16 +28,20 @@ Workquarium is a virtual underwater social and coworking platform where users ca
 
 The Workquarium mobile application connects to a shared backend, authentication system, and database used by both the web and mobile applications.
 
-## Run App
+## Run Mobile App
+
+**Prerequisite:** Start the backend server before running the web application. The shared backend provides the API endpoints, authentication, and MongoDB database used by both the web and mobile applications.
+
+1. Start the backend server: [**SWENG465_WorqServer_Koch-Frantz-Bakh**](https://github.com/moekoch/SWENG465_WorqServer_Koch-Frantz-Bakh).
+2. In a separate terminal, navigate to the web application directory and run:
+
 ```bash
 npx expo start -c
 ```
 
-## Run Server
-```bash
-node server/server.js
-```
 <br>
+
+For API endpoint details and interactive Swagger/OpenAPI documentation, refer to the backend repository.
 
 > **Expo ESLint & Prettier**
 >
