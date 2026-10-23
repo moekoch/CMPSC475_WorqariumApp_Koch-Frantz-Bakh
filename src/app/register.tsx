@@ -1,6 +1,6 @@
 import { useScreenNav } from '@/hooks/useScreenNav';
 import { api } from '@/lib/api';
-import RegisterScreen from '@/screens/registerScreen';
+import RegisterScreen from '@/screens/RegisterScreen';
 
 export default function Register() {
   const navigation = useScreenNav();
@@ -21,8 +21,10 @@ export default function Register() {
     });
   };
 
-  return <RegisterScreen
-    navigation={navigation}
-    onRegister={handleRegister}
-  />;
+  return (
+    <RegisterScreen
+      navigation={navigation}
+      onRegister={handleRegister}
+    />
+  );
 }

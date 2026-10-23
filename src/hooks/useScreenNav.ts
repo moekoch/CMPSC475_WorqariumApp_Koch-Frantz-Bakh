@@ -24,6 +24,7 @@ const ROUTES: Record<string, string> = {
   tictactoe: '/tictactoe',
   avatar: '/avatar',
   store: '/store',
+  settings: '/settings',
   botQuery: '/bot-query',
 };
 

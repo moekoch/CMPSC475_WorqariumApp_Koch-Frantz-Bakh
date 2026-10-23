@@ -3,11 +3,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../../constants/theme';
 
 const TABS = [
-  { key: 'Home', icon: 'waves', label: 'Reef' },
+  { key: 'Home', icon: 'waves', label: 'Reef', route: 'joinSession' },
   { key: 'Games', icon: 'gamepad-variant', label: 'Games', route: 'games' },
-  { key: 'Avatar', icon: 'fish', label: 'My Fish' },
-  { key: 'Store', icon: 'treasure-chest', label: 'Store' },
-  { key: 'Settings', icon: 'cog', label: 'Settings' },
+  { key: 'Avatar', icon: 'fish', label: 'My Fish', route: 'avatar' },
+  { key: 'Store', icon: 'treasure-chest', label: 'Store', route: 'store' },
+  { key: 'Settings', icon: 'cog', label: 'Settings', route: 'settings' },
 ];
 
 /**
@@ -28,12 +28,14 @@ export default function WorqariumNav({ active, onNavigate, navigation }) {
               onPress={() => {
                 if (onNavigate) {
                   onNavigate(tab.key);
-                } else if (tab.route) {
+                } else {
                   navigation?.navigate(tab.route);
                 }
               }}
               style={styles.tab}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={tab.label}
             >
               {isActive && <View style={styles.marker} />}
               <MaterialCommunityIcons

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import {
-	ActivityIndicator,
-	KeyboardAvoidingView,
-	Platform,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WaterBackground from '../components/aquarium/WaterBackground';

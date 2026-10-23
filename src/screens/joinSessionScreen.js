@@ -48,7 +48,7 @@ export default function JoinSessionScreen({ navigation }) {
       </View>
 
       {/* Worqarium bottom navigation bar */}
-      <WorqariumNav active="home" navigation={navigation} />
+      <WorqariumNav active="Home" navigation={navigation} />
     </WaterBackground>
   );
 }
