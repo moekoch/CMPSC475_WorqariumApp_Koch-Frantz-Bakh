@@ -1,7 +1,14 @@
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 
+// Expo knows computer's address to use with server's port
+function getDefaultApiUrl() {
+    const host = Constants.expoConfig?.hostUri?.split(':')[0];
+    return host ? `http://${host}:3000` : 'http://localhost:3000';
+}
+
 // server address
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+export const API_URL = getDefaultApiUrl();
 
 // login token
 const TOKEN_KEY = 'token';
