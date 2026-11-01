@@ -3,7 +3,7 @@
  * — required by app-tabs, themed-text, themed-view, use-theme, index/explore screens.
  * Do not remove these; the generated app shell depends on them directly.
  */
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const Colors = {
   light: {
@@ -145,4 +145,43 @@ export const RADII = {
 
 export const SPACING = { xs: 6, sm: 10, md: 16, lg: 24, xl: 32, xxl: 48 };
 
-export default { Colors, Fonts, Spacing, BottomTabInset, MaxContentWidth, COLORS, GRADIENTS, FONTS, FONT_FALLBACK, RADII, SPACING };
+export const SCREEN_STYLES = StyleSheet.create({
+  placeholderCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.pearl,
+    borderRadius: 24,
+    paddingHorizontal: 28,
+    paddingVertical: 32,
+  },
+  gamePlaceholderCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.pearl,
+    ...RADII.organicA,
+    padding: 28,
+  },
+  placeholderTitle: {
+    color: COLORS.ink,
+    fontFamily: FONTS.heading,
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  placeholderDescription: {
+    color: COLORS.inkSoft,
+    fontFamily: FONTS.body,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  placeholderButton: {
+    backgroundColor: COLORS.deepWater,
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  placeholderButtonText: {
+    color: COLORS.pearl,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
+  },
+});
+
+export default { Colors, Fonts, Spacing, BottomTabInset, MaxContentWidth, COLORS, GRADIENTS, FONTS, FONT_FALLBACK, RADII, SPACING, SCREEN_STYLES };

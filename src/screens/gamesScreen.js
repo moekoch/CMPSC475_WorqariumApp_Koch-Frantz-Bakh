@@ -3,15 +3,15 @@ import BlackjackImage from '../../assets/images/games/Blackjack.png';
 import GoFishImage from '../../assets/images/games/GoFish.png';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import WorqariumNav from '../components/aquarium/WorqariumNav';
-import { COLORS, FONTS, RADII } from '../constants/theme';
+import { COLORS, FONTS, RADII, SCREEN_STYLES } from '../constants/theme';
 
 export default function GamesScreen({ navigation }) {
   return (
     <WaterBackground style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.title}>Games</Text>
-          <Text style={styles.description}>Choose a game to play together.</Text>
+          <Text style={SCREEN_STYLES.placeholderTitle}>Games</Text>
+          <Text style={SCREEN_STYLES.placeholderDescription}>Choose a game to play together.</Text>
         </View>
         <View style={styles.card}>
           <Image source={GoFishImage} resizeMode="contain" style={styles.gameImage} />
@@ -56,18 +56,6 @@ const styles = StyleSheet.create({
   gameImage: {
     width: 144,
     height: 110,
-  },
-  title: {
-    color: COLORS.ink,
-    fontFamily: FONTS.heading,
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  description: {
-    color: COLORS.inkSoft,
-    fontFamily: FONTS.body,
-    fontSize: 16,
-    textAlign: 'center',
   },
   button: {
     backgroundColor: COLORS.deepWater,
