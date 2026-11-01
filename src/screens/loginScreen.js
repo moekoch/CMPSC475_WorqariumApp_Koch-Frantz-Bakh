@@ -195,6 +195,17 @@ const LoginScreen = ({
 							{busy ? <ActivityIndicator color={COLORS.pearl} /> : <Text style={styles.primaryButtonText}>Sign in</Text>}
 						</TouchableOpacity>
 
+						{__DEV__ && (
+							<TouchableOpacity
+								style={[styles.devBypassButton, busy && styles.disabledButton]}
+								onPress={returnToSession}
+								disabled={busy}
+								accessibilityRole="button"
+							>
+								<Text style={styles.devBypassText}>Dev: Bypass login</Text>
+							</TouchableOpacity>
+						)}
+
 						<View style={styles.registerPrompt}>
 							<Text style={styles.registerPromptText}>Don't have an account? </Text>
 							<TouchableOpacity
@@ -276,6 +287,16 @@ const styles = StyleSheet.create({
 	},
 	disabledButton: { opacity: 0.65 },
 	primaryButtonText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 16 },
+	devBypassButton: {
+		alignItems: 'center',
+		borderColor: COLORS.deepWater,
+		borderRadius: 10,
+		borderWidth: 1,
+		justifyContent: 'center',
+		marginTop: 12,
+		minHeight: 44,
+	},
+	devBypassText: { color: COLORS.deepWater, fontFamily: FONTS.bodyBold, fontSize: 14 },
 	registerPrompt: {
 		flexDirection: 'row',
 		justifyContent: 'center',

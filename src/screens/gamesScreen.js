@@ -25,6 +25,11 @@ export default function GamesScreen({ navigation }) {
             <Text style={styles.BtnText}>Blackjack</Text>
           </Pressable>
         </View>
+        <View style={styles.card}>
+          <Pressable style={styles.button} onPress={() => navigation.navigate('spades')}>
+            <Text style={styles.BtnText}>Spades</Text>
+          </Pressable>
+        </View>
       </ScrollView>
       <WorqariumNav active="Games" navigation={navigation} />
     </WaterBackground>
