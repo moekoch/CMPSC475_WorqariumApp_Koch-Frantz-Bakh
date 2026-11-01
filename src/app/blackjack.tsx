@@ -1,6 +1,6 @@
 // src/app/blackjack.tsx
 // New route: /blackjack — reached via router.push from the games page.
-
+import React from 'react';
 import { useScreenNav } from '../hooks/useScreenNav';
 import BlackJackScreen from '../screens/blackjackScreen';
 

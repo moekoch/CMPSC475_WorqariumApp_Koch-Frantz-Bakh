@@ -1,6 +1,6 @@
 // src/app/go-fish.tsx
 // New route: /go-fish — reached via navigation from the games page.
-
+import React from 'react';
 import { useScreenNav } from '../hooks/useScreenNav';
 import GoFishScreen from '../screens/goFishScreen';
 

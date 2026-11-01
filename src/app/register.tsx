@@ -1,6 +1,7 @@
 import { useScreenNav } from '@/hooks/useScreenNav';
 import { api } from '@/lib/api';
 import RegisterScreen from '@/screens/RegisterScreen';
+import React from 'react';
 
 export default function Register() {
   const navigation = useScreenNav();
