@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Animated,
-  Easing,
   Image,
   Pressable,
   ScrollView,
@@ -27,24 +25,6 @@ const PLAYER_FISH = ['orangeClownfish', 'blueTang', 'moorishIdol', 'linedButterf
 const WINNING_SCORE = 500;
 const HAND_SIZE = 13;
 const TRICKS_PER_HAND = 13;
-
-const CONFETTI_COLORS = [
-  COLORS.coral,
-  COLORS.sunYellow,
-  COLORS.reefGreen,
-  COLORS.shallow,
-  '#ffffff',
-  '#b48cff',
-];
-const CONFETTI_PIECES = Array.from({ length: 36 }, (_, index) => ({
-  left: `${(index * 37 + 7) % 97}%`,
-  width: index % 4 === 0 ? 11 : 8,
-  height: index % 3 === 0 ? 17 : 12,
-  delay: (index % 9) * 55,
-  drift: ((index * 29) % 121) - 60,
-  rotation: (index % 2 === 0 ? 1 : -1) * (360 + (index % 4) * 180),
-  color: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
-}));
 
 const CARD_IMAGES = {
   '2C': require('../../assets/images/cards/2C.png'),
@@ -164,7 +144,6 @@ function createRound(scores = [0, 0], bags = [0, 0], roundNumber = 1) {
     message: 'Place your bid to begin the hand.',
     handResult: '',
     yourTeamMadeBid: false,
-    completedRoundId: null,
   };
 }
 
@@ -291,7 +270,6 @@ function finishTrick(game) {
       turn: winner,
       message: `Hand complete. ${PLAYER_NAMES[winner]} won the last trick.`,
       handResult: scored.result,
-      completedRoundId: `${game.roundNumber}-${Date.now()}`,
     };
   }
 
@@ -333,77 +311,13 @@ function PlayerBadge({ player, playerIndex, isTurn, bidding }) {
   );
 }
 
-function ConfettiPiece({ piece, screenHeight }) {
-  const progress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    progress.setValue(0);
-    const animation = Animated.sequence([
-      Animated.delay(piece.delay),
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: 3000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ]);
-    animation.start();
-    return () => animation.stop();
-  }, [piece, progress]);
-
-  const translateY = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-piece.height - 30, screenHeight + 30],
-  });
-  const translateX = progress.interpolate({
-    inputRange: [0, 0.45, 1],
-    outputRange: [0, piece.drift, piece.drift * -0.5],
-  });
-  const rotate = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', `${piece.rotation}deg`],
-  });
-  const opacity = progress.interpolate({
-    inputRange: [0, 0.08, 0.88, 1],
-    outputRange: [0, 1, 1, 0],
-  });
-
-  return (
-    <Animated.View
-      style={[
-        styles.confettiPiece,
-        {
-          backgroundColor: piece.color,
-          height: piece.height,
-          left: piece.left,
-          opacity,
-          transform: [{ translateX }, { translateY }, { rotate }],
-          width: piece.width,
-        },
-      ]}
-    />
-  );
-}
-
-function Confetti({ roundId, screenHeight, active }) {
-  // Keying the piece list by roundId guarantees a fresh animation each winning round.
-  if (!active) return null;
-  return (
-    <View pointerEvents="none" style={styles.celebrationLayer}>
-      {CONFETTI_PIECES.map((piece, index) => (
-        <ConfettiPiece key={`${roundId}-${index}`} piece={piece} screenHeight={screenHeight} />
-      ))}
-    </View>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* Screen                                                              */
 /* ------------------------------------------------------------------ */
 
 export default function SpadesScreen({ navigation }) {
   const [game, setGame] = useState(() => createRound());
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
 
   const handCardWidth = useMemo(
     () => Math.max(28, Math.min(50, Math.floor((windowWidth - 32 - 6 * 6) / 7))),
@@ -486,11 +400,13 @@ export default function SpadesScreen({ navigation }) {
   const gameWon = yourScore >= WINNING_SCORE && yourScore > botScore;
   const gameLost = botScore >= WINNING_SCORE && botScore >= yourScore;
   const gameOver = gameWon || gameLost;
-  const showConfetti = game.phase === 'roundOver' && gameWon;
 
   const turnLabel = useMemo(() => {
     if (game.phase === 'bidding') return 'Set your bid';
-    if (game.phase === 'roundOver') return gameOver ? (gameWon ? 'You win!' : 'Bots win!') : 'Hand complete';
+    if (game.phase === 'roundOver') {
+      if (gameOver) return gameWon ? 'You win the game!' : 'Bots win the game';
+      return 'Hand complete';
+    }
     if (game.turn === 0) return `Your turn · Trick ${game.trickNumber + 1}/${TRICKS_PER_HAND}`;
     return `${PLAYER_NAMES[game.turn]} is playing`;
   }, [game.phase, game.turn, game.trickNumber, gameOver, gameWon]);
@@ -606,6 +522,15 @@ export default function SpadesScreen({ navigation }) {
 
           {game.phase === 'roundOver' && (
             <View style={styles.resultCard}>
+              <Text
+                accessibilityRole="header"
+                style={[
+                  styles.handOutcome,
+                  game.yourTeamMadeBid ? styles.handWon : styles.handMissed,
+                ]}
+              >
+                {game.yourTeamMadeBid ? 'You won this hand!' : 'You missed your bid'}
+              </Text>
               <Text style={styles.resultText}>{game.handResult}</Text>
               <Pressable
                 accessibilityRole="button"
@@ -654,11 +579,6 @@ export default function SpadesScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      <Confetti
-        active={showConfetti}
-        roundId={game.completedRoundId ?? 'none'}
-        screenHeight={windowHeight}
-      />
     </WaterBackground>
   );
 }
@@ -856,14 +776,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     padding: 16,
   },
-  celebrationLayer: {
-    ...StyleSheet.absoluteFillObject,
-    elevation: 10,
-    overflow: 'hidden',
-    zIndex: 10,
+  handOutcome: {
+    fontFamily: FONTS.heading,
+    fontSize: 22,
+    textAlign: 'center',
   },
-  confettiPiece: {
-    position: 'absolute',
-    top: 0,
-  },
+  handWon: { color: COLORS.sunYellow },
+  handMissed: { color: COLORS.foam },
 });

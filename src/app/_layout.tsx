@@ -1,9 +1,6 @@
 // src/app/_layout.tsx
-//
-// Replaces the Expo template's <Tabs> navigator (the native "Home | Explore"
-// bar you saw at the bottom of the device screenshot). Each screen now
-// renders its own chrome, including the custom WorqariumNav pill bar, so a
-// second, native tab bar underneath it would be redundant.
+// Replaces the Expo template's <Tabs> navigator
+// Each screen now renders its own chrome, including the custom WorqariumNav pill bar
 import { Stack } from 'expo-router';
 import React from 'react';
 
