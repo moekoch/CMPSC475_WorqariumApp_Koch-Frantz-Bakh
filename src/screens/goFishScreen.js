@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -446,24 +447,19 @@ export default function GoFishScreen({ navigation }) {
           </Pressable>
         </View>
       </ScrollView>
-      {game.gameOver && (
-        <View
-          style={[
-            styles.gameOverOverlay,
-            {
-              paddingTop: insets.top + 16,
-              paddingBottom: insets.bottom + 16,
-            },
-          ]}
-        >
-          <View style={styles.gameOverCard}>
-            <Text style={styles.gameOverTitle}>Game over</Text>
-            <Text
-              accessibilityLiveRegion="polite"
-              style={styles.gameOverMessage}
-            >
-              {game.message}
-            </Text>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => navigation?.goBack?.()}
+        statusBarTranslucent
+        transparent
+        visible={game.gameOver}
+      >
+        <View style={styles.gameOverOverlay}>
+          <View
+            accessibilityViewIsModal
+            style={styles.gameOverCard}
+          >
+            <Text style={styles.gameOverMessage}>{game.message}</Text>
             <Pressable
               accessibilityRole="button"
               onPress={newGame}
@@ -473,7 +469,7 @@ export default function GoFishScreen({ navigation }) {
             </Pressable>
           </View>
         </View>
-      )}
+      </Modal>
     </WaterBackground>
   );
 }
@@ -676,12 +672,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gameOverOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     alignItems: 'center',
     backgroundColor: 'rgba(10, 58, 92, 0.68)',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    zIndex: 1,
   },
   gameOverCard: {
     alignItems: 'center',
@@ -694,19 +689,13 @@ const styles = StyleSheet.create({
     width: '100%',
     ...RADII.organicA,
   },
-  gameOverTitle: {
+  gameOverMessage: {
     color: COLORS.ink,
     fontFamily: FONTS.heading,
     fontSize: 26,
     marginBottom: 10,
     textAlign: 'center',
-  },
-  gameOverMessage: {
-    color: COLORS.inkSoft,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 16,
-    marginBottom: 22,
-    textAlign: 'center',
+    fontWeight: 'bold',
   },
   playAgainButton: {
     alignItems: 'center',
