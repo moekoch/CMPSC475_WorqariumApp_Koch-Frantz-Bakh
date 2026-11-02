@@ -446,6 +446,34 @@ export default function GoFishScreen({ navigation }) {
           </Pressable>
         </View>
       </ScrollView>
+      {game.gameOver && (
+        <View
+          style={[
+            styles.gameOverOverlay,
+            {
+              paddingTop: insets.top + 16,
+              paddingBottom: insets.bottom + 16,
+            },
+          ]}
+        >
+          <View style={styles.gameOverCard}>
+            <Text style={styles.gameOverTitle}>Game over</Text>
+            <Text
+              accessibilityLiveRegion="polite"
+              style={styles.gameOverMessage}
+            >
+              {game.message}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={newGame}
+              style={styles.playAgainButton}
+            >
+              <Text style={styles.playAgainText}>Play again</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </WaterBackground>
   );
 }
@@ -646,6 +674,53 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
     textAlign: 'center',
+  },
+  gameOverOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    backgroundColor: 'rgba(10, 58, 92, 0.68)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    zIndex: 1,
+  },
+  gameOverCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.pearl,
+    borderColor: COLORS.glassEdge,
+    borderRadius: 24,
+    borderWidth: 1,
+    maxWidth: 420,
+    padding: 24,
+    width: '100%',
+    ...RADII.organicA,
+  },
+  gameOverTitle: {
+    color: COLORS.ink,
+    fontFamily: FONTS.heading,
+    fontSize: 26,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  gameOverMessage: {
+    color: COLORS.inkSoft,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
+    marginBottom: 22,
+    textAlign: 'center',
+  },
+  playAgainButton: {
+    alignItems: 'center',
+    backgroundColor: COLORS.deepWater,
+    borderRadius: 14,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 24,
+    width: '100%',
+  },
+  playAgainText: {
+    color: COLORS.pearl,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
   },
   newGameButton: {
     marginTop: 14,
