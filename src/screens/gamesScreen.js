@@ -1,6 +1,7 @@
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import BlackjackImage from '../../assets/images/games/Blackjack.png';
 import GoFishImage from '../../assets/images/games/GoFish.png';
+import SpadesImage from '../../assets/images/games/Spades.png';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import WorqariumNav from '../components/aquarium/WorqariumNav';
 import { COLORS, FONTS, RADII, SCREEN_STYLES } from '../constants/theme';
@@ -26,6 +27,7 @@ export default function GamesScreen({ navigation }) {
           </Pressable>
         </View>
         <View style={styles.card}>
+          <Image source={SpadesImage} resizeMode="contain" style={styles.gameImage} />
           <Pressable style={styles.button} onPress={() => navigation.navigate('spades')}>
             <Text style={styles.BtnText}>Spades</Text>
           </Pressable>

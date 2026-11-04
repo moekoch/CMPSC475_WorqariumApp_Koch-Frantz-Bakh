@@ -675,13 +675,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignItems: 'center',
-    backgroundColor: COLORS.coral,
+    backgroundColor: COLORS.reefGreen,
     borderRadius: 20,
     justifyContent: 'center',
     minHeight: 42,
     paddingHorizontal: 20,
   },
-  actionText: { color: COLORS.ink, fontFamily: FONTS.bodyBold, fontSize: 15 },
+  actionText: { color: COLORS.foam, fontFamily: FONTS.bodyBold, fontSize: 15 },
   playerRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   },
   activePlayerBadge: {
     backgroundColor: 'rgba(255,255,255,0.12)',
-    borderColor: COLORS.sunYellow,
+    borderColor: COLORS.coral,
   },
   fishFrame: {
     alignItems: 'center',
