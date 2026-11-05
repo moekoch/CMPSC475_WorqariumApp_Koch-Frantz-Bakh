@@ -103,6 +103,38 @@ export const COLORS = {
   glassFill: 'rgba(236,250,253,0.22)',
   bubbleFill: 'rgba(255,255,255,0.38)',
   bubbleEdge: 'rgba(255,255,255,0.75)',
+
+  // Shared glass-and-gloss palette established by the Spades screen.
+  glassLight: 'rgba(255,255,255,0.16)',
+  glassStrong: 'rgba(255,255,255,0.30)',
+  glassDeep: 'rgba(8,92,148,0.55)',
+  glassRim: 'rgba(255,255,255,0.7)',
+  glassSubtle: 'rgba(255,255,255,0.10)',
+  glassMedium: 'rgba(255,255,255,0.14)',
+  glassControl: 'rgba(255,255,255,0.20)',
+  glassShine: 'rgba(255,255,255,0.34)',
+  glassText: 'rgba(255,255,255,0.9)',
+  glassTextMuted: 'rgba(255,255,255,0.92)',
+  glassTextStrong: 'rgba(255,255,255,0.95)',
+  modalGlass: 'rgba(238,249,255,0.96)',
+  resultGlass: 'rgba(6,66,114,0.86)',
+  textGlow: 'rgba(0,50,90,0.55)',
+  cardShadow: '#022A48',
+  cardRim: 'rgba(11,74,116,0.30)',
+  activeGlowFill: 'rgba(185,255,122,0.24)',
+  resultOverlay: 'rgba(3,38,66,0.35)',
+  modalOverlay: 'rgba(3,40,70,0.6)',
+
+  aquaDark: '#0E86C0',
+  aquaRim: '#A8EBFF',
+  limeDark: '#2FAE4C',
+  limeGlow: '#B9FF7A',
+  aeroInk: '#0B4A74',
+  aeroInkSoft: '#3D7599',
+  difficultyMedium: '#E09A00',
+  difficultyMediumRim: '#FFE58A',
+  difficultyHard: '#D8453B',
+  difficultyHardRim: '#FFB5A8',
 };
 
 export const GRADIENTS = {
