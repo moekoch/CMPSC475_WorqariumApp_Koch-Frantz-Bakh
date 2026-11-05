@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { Easing, FadeInUp, LinearTransition } from 'react-native-reanimated';
 import FishSprite from '../components/aquarium/FishSprite';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import { COLORS, FONTS } from '../constants/theme';
@@ -132,7 +133,7 @@ const RULES_SECTIONS = [
   {
     title: 'Playing',
     body:
-      'You must follow the suit that was led if you can. If you cannot, you may play any card. Spades are always trump, so any spade beats any card of another suit. The highest card of the winning suit takes the trick, and the trick winner leads next. Spades cannot be led until a spade has been played (unless a hand is all spades).',
+      'Follow the suit that was led if you can, or play a spade to trump another suit at any time. If you cannot follow suit, you may play any card. Spades are always trump, so any spade beats any card of another suit. The highest card of the winning suit takes the trick, and the trick winner leads next. Spades cannot be led until a spade has been played (unless a hand is all spades).',
   },
   {
     title: 'Scoring',
@@ -294,7 +295,9 @@ function legalCards(hand, trick, spadesBroken) {
   if (trick.length > 0) {
     const ledSuit = trick[0].card.suit;
     const followingSuit = hand.filter((card) => card.suit === ledSuit);
-    return followingSuit.length ? followingSuit : hand;
+    if (!followingSuit.length) return hand;
+    if (ledSuit === 'S') return followingSuit;
+    return [...followingSuit, ...hand.filter((card) => card.suit === 'S')];
   }
   if (!spadesBroken) {
     const nonSpades = hand.filter((card) => card.suit !== 'S');
@@ -736,7 +739,15 @@ function finishTrick(game) {
 
 const SIDE_W = 72; // width of the West / East badges
 const TOP_INSET = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 54;
-const LIFT = 12; // how far playable cards rise above the rest of the hand
+
+// Vertical offsets for cards in the hand. The selected card pops up in place,
+// so there is no separate preview row taking up space.
+const REST_TOP = 20; // cards you cannot play
+const PLAYABLE_TOP = 12; // cards you can play sit slightly higher
+const SELECTED_TOP = 0; // the selected card lifts fully above the fan
+
+const CARD_ENTERING = FadeInUp.duration(220);
+const HAND_LAYOUT = LinearTransition.duration(220).easing(Easing.inOut(Easing.quad));
 
 function Glass({ children, style, tint = COLORS.glassLight, radius = 20, gloss = true }) {
   return (
@@ -806,12 +817,12 @@ function PlayerBadge({ player, playerIndex, isTurn, isDealer, horizontal }) {
         <Text style={styles.playerStats} numberOfLines={1}>
           Bid {formatBid(player.bid)} · {player.tricks} won
         </Text>
-        {isDealer && (
-          <View style={styles.dealerChip}>
-            <Text style={styles.dealerChipText}>Dealer</Text>
-          </View>
-        )}
       </View>
+      {isDealer && (
+        <View accessibilityLabel="Dealer" style={styles.dealerChip}>
+          <Text style={styles.dealerChipText}>D</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -853,6 +864,7 @@ function InfoModal({ visible, title, children, buttonLabel, onPress }) {
 export default function SpadesScreen({ navigation }) {
   const [game, setGame] = useState(() => createGame());
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState(null);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   /* ----- responsive sizing: everything must fit one screen, no scrolling ----- */
@@ -945,13 +957,6 @@ export default function SpadesScreen({ navigation }) {
     }));
   }, []);
 
-  const onPlayCard = useCallback((card) => {
-    setGame((current) => {
-      if (current.phase !== 'playing' || current.turn !== 0) return current;
-      return playCard(current, 0, card);
-    });
-  }, []);
-
   // Dealer rotates clockwise after every hand, regardless of who won tricks.
   const nextHand = useCallback(() => {
     setGame((current) =>
@@ -986,6 +991,40 @@ export default function SpadesScreen({ navigation }) {
   }, [myTurnToPlay, game.trick, game.spadesBroken, playerHand]);
 
   const playableIds = useMemo(() => new Set(playable.map((c) => c.id)), [playable]);
+  // Only treat a card as selected while it is actually playable.
+  const selectedCard = playerHand.find(
+    (card) => card.id === selectedCardId && playableIds.has(card.id)
+  );
+
+  const onHandCardPress = useCallback(
+    (card) => {
+      if (!playableIds.has(card.id)) return;
+      if (selectedCardId === card.id) {
+        setSelectedCardId(null);
+        setGame((current) => {
+          if (current.phase !== 'playing' || current.turn !== 0 || current.trick.length >= 4) {
+            return current;
+          }
+          const currentCard = current.players[0].hand.find(
+            (handCard) => handCard.id === card.id
+          );
+          if (!currentCard) return current;
+          const currentPlayableCards = legalCards(
+            current.players[0].hand,
+            current.trick,
+            current.spadesBroken
+          );
+          if (!currentPlayableCards.some((playableCard) => playableCard.id === card.id)) {
+            return current;
+          }
+          return playCard(current, 0, currentCard);
+        });
+        return;
+      }
+      setSelectedCardId(card.id);
+    },
+    [playableIds, selectedCardId]
+  );
 
   const yourScore = game.scores[0];
   const botScore = game.scores[1];
@@ -1009,9 +1048,11 @@ export default function SpadesScreen({ navigation }) {
   }, [game.phase, game.turn, game.dealer, game.trickNumber, gameOver, youWon]);
 
   const hint = myTurnToPlay
-    ? game.leadSuit
-      ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit if you can`
-      : 'You lead · tap a glowing card'
+    ? selectedCard
+      ? `Selected ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]} · tap again to play`
+      : game.leadSuit
+        ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit or trump with a spade`
+        : 'You lead · tap a glowing card to select it'
     : game.message;
 
   const currentPopup = game.popups[0];
@@ -1029,8 +1070,7 @@ export default function SpadesScreen({ navigation }) {
     />
   );
 
-  const handWidth =
-    playerHand.length > 0 ? sizes.step * (playerHand.length - 1) + sizes.handCardW : 0;
+  const handWidth = sizes.step * (HAND_SIZE - 1) + sizes.handCardW;
 
   return (
     <WaterBackground
@@ -1062,17 +1102,17 @@ export default function SpadesScreen({ navigation }) {
         </View>
 
         {/* score strip */}
-        <Glass tint={COLORS.glassStrong} radius={20} style={styles.scoreCard}>
+        <Glass tint={COLORS.glassStrong} radius={20} gloss={false} style={styles.scoreCard}>
           <View style={styles.scoreTeam}>
             <Text style={styles.scoreLabel}>Your team</Text>
             <Text style={styles.score}>{yourScore}</Text>
             <Text style={styles.scoreDetail}>{game.bags[0]} bags</Text>
           </View>
           <View style={styles.scoreMiddle}>
-            <Text style={styles.scoreDetail}>Hand {game.roundNumber}</Text>
-            {game.difficulty && (
-              <Text style={styles.scoreDetail}>{DIFFICULTY_LABELS[game.difficulty]}</Text>
-            )}
+            <Text style={styles.scoreDetail}>
+              Hand {game.roundNumber}
+              {game.difficulty ? ` · ${DIFFICULTY_LABELS[game.difficulty]}` : ''}
+            </Text>
             {game.overtime && !gameOver && <Text style={styles.overtime}>OVERTIME</Text>}
           </View>
           <View style={styles.scoreTeam}>
@@ -1083,8 +1123,8 @@ export default function SpadesScreen({ navigation }) {
         </Glass>
 
         {/* table */}
-        <Glass tint={COLORS.glassDeep} radius={28} style={styles.table}>
-          <Glass tint={COLORS.glassStrong} radius={16} style={styles.statusPill}>
+        <Glass tint={COLORS.glassDeep} radius={28} gloss={false} style={styles.table}>
+          <Glass tint={COLORS.glassStrong} radius={16} gloss={false} style={styles.statusPill}>
             <Text style={styles.statusTitle} numberOfLines={1}>
               {turnLabel}
             </Text>
@@ -1098,10 +1138,11 @@ export default function SpadesScreen({ navigation }) {
           <View style={styles.middleRow}>
             <View style={styles.sideWrap}>{renderBadge(1)}</View>
 
-            <Glass tint={COLORS.glassSubtle} radius={22} style={styles.trickArea}>
+            <Glass tint={COLORS.glassSubtle} radius={22} gloss={false} style={styles.trickArea}>
               {game.trick.map(({ playerIndex, card }) => (
-                <Image
+                <Animated.Image
                   key={`${playerIndex}-${card.id}`}
+                  entering={CARD_ENTERING}
                   source={CARD_IMAGES[card.id]}
                   resizeMode="contain"
                   style={[
@@ -1193,39 +1234,53 @@ export default function SpadesScreen({ navigation }) {
           )}
         </Glass>
 
-        {/* hand: one fanned row, sized to fit the screen width */}
-        <Glass tint={COLORS.glassMedium} radius={22} style={styles.handShelf}>
+        {/* hand: one fanned row; the selected card lifts in place */}
+        <Glass tint={COLORS.glassMedium} radius={22} gloss={false} style={styles.handShelf}>
           <View
             style={{
-              height: sizes.handCardH + LIFT,
               width: Math.max(handWidth, 1),
+              height: sizes.handCardH + REST_TOP,
               justifyContent: 'center',
             }}
           >
             {playerHand.map((card, index) => {
               const canPlay = playableIds.has(card.id);
               const dimmed = myTurnToPlay && !canPlay;
+              const selected = canPlay && selectedCardId === card.id;
               return (
-                <Pressable
+                <Animated.View
                   key={card.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${card.rank} of ${SUIT_NAMES[card.suit]}${canPlay ? ', playable' : ''}`}
-                  disabled={!canPlay}
-                  onPress={() => onPlayCard(card)}
+                  layout={HAND_LAYOUT}
                   style={[
                     styles.handCard,
                     {
                       width: sizes.handCardW,
                       height: sizes.handCardH,
                       left: index * sizes.step,
-                      top: canPlay ? 0 : LIFT,
+                      top: selected ? SELECTED_TOP : canPlay ? PLAYABLE_TOP : REST_TOP,
+                      zIndex: selected ? HAND_SIZE + 1 : index,
                     },
                     canPlay && styles.playableCard,
-                    dimmed && styles.unplayableCard,
+                    selected && styles.selectedHandCard,
                   ]}
                 >
-                  <Image source={CARD_IMAGES[card.id]} resizeMode="contain" style={styles.handImage} />
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${card.rank} of ${SUIT_NAMES[card.suit]}${
+                      selected ? ', selected; tap again to play' : canPlay ? ', tap to select' : ''
+                    }`}
+                    disabled={!canPlay}
+                    onPress={() => onHandCardPress(card)}
+                    style={StyleSheet.absoluteFill}
+                  >
+                    <Image
+                      source={CARD_IMAGES[card.id]}
+                      resizeMode="contain"
+                      style={styles.handImage}
+                    />
+                    {dimmed && <View pointerEvents="none" style={styles.dimOverlay} />}
+                  </Pressable>
+                </Animated.View>
               );
             })}
             {playerHand.length === 0 && (
@@ -1329,8 +1384,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
     flex: 1,
-    gap: 8,
-    paddingBottom: 18,
+    gap: 10,
+    paddingBottom: 24,
     paddingHorizontal: 12,
     paddingTop: TOP_INSET + 8,
   },
@@ -1389,11 +1444,11 @@ const styles = StyleSheet.create({
   title: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 28, ...textGlow },
 
   /* score strip */
-  scoreCard: { alignItems: 'center', flexDirection: 'row', paddingVertical: 6 },
+  scoreCard: { alignItems: 'center', flexDirection: 'row', paddingVertical: 4 },
   scoreTeam: { alignItems: 'center', flex: 1 },
-  scoreMiddle: { alignItems: 'center', width: 84 },
+  scoreMiddle: { alignItems: 'center', width: 110 },
   scoreLabel: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 12, ...textGlow },
-  score: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 28, lineHeight: 32, ...textGlow },
+  score: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 24, lineHeight: 28, ...textGlow },
   scoreDetail: { color: COLORS.glassText, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
   overtime: { color: COLORS.sunYellow, fontFamily: FONTS.bodyBold, fontSize: 11, ...textGlow },
 
@@ -1412,9 +1467,9 @@ const styles = StyleSheet.create({
   },
   statusTitle: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 16, ...textGlow },
   statusHint: { color: COLORS.glassTextMuted, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
-  northWrap: { alignSelf: 'center', marginTop: 6 },
+  northWrap: { alignSelf: 'center', marginTop: 8 },
   southWrap: { alignSelf: 'center', marginTop: 2 },
-  middleRow: { alignItems: 'stretch', flex: 1, flexDirection: 'row', marginVertical: 6 },
+  middleRow: { alignItems: 'stretch', flex: 1, flexDirection: 'row', marginVertical: 8 },
   sideWrap: { justifyContent: 'center', width: SIDE_W },
   trickArea: { alignItems: 'center', flex: 1, justifyContent: 'center', marginHorizontal: 4 },
   trickImage: {
@@ -1469,15 +1524,19 @@ const styles = StyleSheet.create({
   playerName: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 11, ...textGlow },
   playerStats: { color: COLORS.glassTextMuted, fontFamily: FONTS.body, fontSize: 10, ...textGlow },
   dealerChip: {
+    alignItems: 'center',
     backgroundColor: COLORS.coral,
     borderColor: COLORS.glassRim,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    marginTop: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 0,
+    height: 20,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    top: -6,
+    width: 20,
   },
-  dealerChipText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 9 },
+  dealerChipText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 11 },
 
   /* result overlay */
   resultOverlay: {
@@ -1499,7 +1558,7 @@ const styles = StyleSheet.create({
   resultButton: { marginTop: 10 },
 
   /* hand */
-  handShelf: { alignItems: 'center', paddingBottom: 6, paddingHorizontal: 8, paddingTop: 6 },
+  handShelf: { alignItems: 'center', paddingBottom: 10, paddingHorizontal: 8, paddingTop: 8 },
   handCard: {
     backgroundColor: COLORS.pearl,
     borderColor: COLORS.cardRim,
@@ -1521,7 +1580,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.95,
     shadowRadius: 7,
   },
-  unplayableCard: { opacity: 0.5 },
+  selectedHandCard: {
+    borderColor: COLORS.sunYellow,
+    borderWidth: 3,
+    elevation: 12,
+    shadowColor: COLORS.sunYellow,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+  },
+  // A tint instead of opacity, so overlapped cards stay solid instead of showing through.
+  dimOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 40, 70, 0.4)' },
   handImage: { height: '100%', width: '100%' },
   emptyHand: { color: COLORS.pearl, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center', ...textGlow },
 
