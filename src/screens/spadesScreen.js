@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Image,
   Modal,
   Platform,
   Pressable,
@@ -11,855 +10,33 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, { Easing, FadeInUp, LinearTransition } from 'react-native-reanimated';
-import FishSprite from '../components/aquarium/FishSprite';
-import WaterBackground from '../components/aquarium/WaterBackground';
 import { COLORS, FONTS } from '../constants/theme';
-
-/* ------------------------------------------------------------------ */
-/* Constants                                                           */
-/* ------------------------------------------------------------------ */
-
-const SUITS = ['C', 'D', 'H', 'S'];
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-const RANK_VALUES = Object.fromEntries(RANKS.map((rank, index) => [rank, index + 2]));
-const SUIT_NAMES = { C: 'Clubs', D: 'Diamonds', H: 'Hearts', S: 'Spades' };
-
-// Index order is clockwise: 0 South (you), 1 West, 2 North (partner), 3 East.
-const SEATS = ['South', 'West', 'North', 'East'];
-const SEAT_TAGS = ['You', 'Bot', 'Partner', 'Bot'];
-const PLAYER_NAMES = ['You', 'West', 'Partner', 'East'];
-const PLAYER_FISH = ['orangeClownfish', 'blueTang', 'moorishIdol', 'linedButterflyfish'];
-const WINNING_SCORE = 500;
-const HAND_SIZE = 13;
-const TRICKS_PER_HAND = 13;
-
-const CARD_IMAGES = {
-  '2C': require('../../assets/images/cards/2C.png'),
-  '2D': require('../../assets/images/cards/2D.png'),
-  '2H': require('../../assets/images/cards/2H.png'),
-  '2S': require('../../assets/images/cards/2S.png'),
-  '3C': require('../../assets/images/cards/3C.png'),
-  '3D': require('../../assets/images/cards/3D.png'),
-  '3H': require('../../assets/images/cards/3H.png'),
-  '3S': require('../../assets/images/cards/3S.png'),
-  '4C': require('../../assets/images/cards/4C.png'),
-  '4D': require('../../assets/images/cards/4D.png'),
-  '4H': require('../../assets/images/cards/4H.png'),
-  '4S': require('../../assets/images/cards/4S.png'),
-  '5C': require('../../assets/images/cards/5C.png'),
-  '5D': require('../../assets/images/cards/5D.png'),
-  '5H': require('../../assets/images/cards/5H.png'),
-  '5S': require('../../assets/images/cards/5S.png'),
-  '6C': require('../../assets/images/cards/6C.png'),
-  '6D': require('../../assets/images/cards/6D.png'),
-  '6H': require('../../assets/images/cards/6H.png'),
-  '6S': require('../../assets/images/cards/6S.png'),
-  '7C': require('../../assets/images/cards/7C.png'),
-  '7D': require('../../assets/images/cards/7D.png'),
-  '7H': require('../../assets/images/cards/7H.png'),
-  '7S': require('../../assets/images/cards/7S.png'),
-  '8C': require('../../assets/images/cards/8C.png'),
-  '8D': require('../../assets/images/cards/8D.png'),
-  '8H': require('../../assets/images/cards/8H.png'),
-  '8S': require('../../assets/images/cards/8S.png'),
-  '9C': require('../../assets/images/cards/9C.png'),
-  '9D': require('../../assets/images/cards/9D.png'),
-  '9H': require('../../assets/images/cards/9H.png'),
-  '9S': require('../../assets/images/cards/9S.png'),
-  '10C': require('../../assets/images/cards/10C.png'),
-  '10D': require('../../assets/images/cards/10D.png'),
-  '10H': require('../../assets/images/cards/10H.png'),
-  '10S': require('../../assets/images/cards/10S.png'),
-  AC: require('../../assets/images/cards/AC.png'),
-  AD: require('../../assets/images/cards/AD.png'),
-  AH: require('../../assets/images/cards/AH.png'),
-  AS: require('../../assets/images/cards/AS.png'),
-  JC: require('../../assets/images/cards/JC.png'),
-  JD: require('../../assets/images/cards/JD.png'),
-  JH: require('../../assets/images/cards/JH.png'),
-  JS: require('../../assets/images/cards/JS.png'),
-  KC: require('../../assets/images/cards/KC.png'),
-  KD: require('../../assets/images/cards/KD.png'),
-  KH: require('../../assets/images/cards/KH.png'),
-  KS: require('../../assets/images/cards/KS.png'),
-  QC: require('../../assets/images/cards/QC.png'),
-  QD: require('../../assets/images/cards/QD.png'),
-  QH: require('../../assets/images/cards/QH.png'),
-  QS: require('../../assets/images/cards/QS.png'),
-};
-
-const DIFFICULTIES = [
-  {
-    key: 'easy',
-    label: 'Easy',
-    bg: COLORS.limeDark,
-    rim: COLORS.limeGlow,
-    blurb: 'Relaxed bots. They bid roughly and play most cards at random.',
-  },
-  {
-    key: 'medium',
-    label: 'Medium',
-    bg: COLORS.difficultyMedium,
-    rim: COLORS.difficultyMediumRim,
-    blurb: 'Solid bots. They bid carefully, win tricks cheaply, and never overtake their partner.',
-  },
-  {
-    key: 'hard',
-    label: 'Hard',
-    bg: COLORS.difficultyHard,
-    rim: COLORS.difficultyHardRim,
-    blurb: 'Sharp bots. They count cards, track voids, defend nil bids, and manage bags.',
-  },
-];
-const DIFFICULTY_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
-
-const RULES_SECTIONS = [
-  {
-    title: 'The table',
-    body:
-      'Four players, two teams. You (South) and your partner (North) play against West and East, who are the bots. Play moves clockwise.',
-  },
-  {
-    title: 'Dealing',
-    body:
-      'The first dealer is picked at random, then the deal passes clockwise every hand. Winning tricks never changes the dealer. Only the dealer gets the Deal button; everyone else sees "Waiting for dealer".',
-  },
-  {
-    title: 'Bidding',
-    body:
-      'Starting with the player left of the dealer and going clockwise, each player bids how many tricks they expect to take (0-13). A bid of 0 is called NIL. Tap − or + to set your bid, then tap Bid to confirm. When all four players have bid, play begins and the dealer leads the first trick.',
-  },
-  {
-    title: 'Playing',
-    body:
-      'Follow the suit that was led if you can, or play a spade to trump another suit at any time. If you cannot follow suit, you may play any card. Spades are always trump, so any spade beats any card of another suit. The highest card of the winning suit takes the trick, and the trick winner leads next. Spades cannot be led until a spade has been played (unless a hand is all spades).',
-  },
-  {
-    title: 'Scoring',
-    body:
-      'Your team adds your two bids together. If your team takes at least that many tricks, you score 10 points per bid trick. Each extra trick is a bag and is worth 1 point. If you miss your bid, you lose 10 points per bid trick.',
-  },
-  {
-    title: 'Nil',
-    body:
-      'A player who bids NIL promises to take no tricks. NIL SUCCESS: +100 points. NIL FAILURE (they take any trick): −100 points. A nil bidder\'s tricks do not count toward their partner\'s bid.',
-  },
-  {
-    title: 'Bags',
-    body:
-      'Bags are bad. Every time a team collects 10 bags it takes a BAG PENALTY of −100 points.',
-  },
-  {
-    title: 'Boston',
-    body:
-      'If one team takes all 13 tricks in a hand, that is a BOSTON. They score +100 and the other team scores 0 for the hand.',
-  },
-  {
-    title: 'Bot difficulty',
-    body:
-      'Your partner and both opponents are bots, and you pick their skill level when a game starts. Easy bots play mostly at random. Medium bots follow sensible trick-taking habits. Hard bots count cards, remember who is out of a suit, try to bust nil bids, and avoid collecting bags. Start a new game to change the level.',
-  },
-  {
-    title: 'Winning',
-    body:
-      'The first team to reach 500 points wins. If both teams reach 500 in the same hand, the higher score wins. If they are tied at 500 or more, the game goes to OVERTIME and continues until one team is ahead after a hand.',
-  },
-];
-
-/* ------------------------------------------------------------------ */
-/* Pure game logic                                                     */
-/* ------------------------------------------------------------------ */
-
-const teamOf = (playerIndex) => playerIndex % 2; // 0 = you + partner, 1 = bots
-const teamLabel = (team) => (team === 0 ? 'Your team' : 'Them');
-const signed = (n) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`;
-const formatBid = (bid) => (bid === null || bid === undefined ? '—' : bid === 0 ? 'NIL' : String(bid));
-
-function createDeck() {
-  return SUITS.flatMap((suit) => RANKS.map((rank) => ({ id: `${rank}${suit}`, rank, suit })));
-}
-
-function shuffle(deck) {
-  const copy = [...deck];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function estimateBid(hand) {
-  const suitCounts = SUITS.map((suit) => hand.filter((card) => card.suit === suit).length);
-  const spadeCount = suitCounts[SUITS.indexOf('S')];
-  let points = Math.max(0, spadeCount - 3);
-
-  for (const card of hand) {
-    if (card.rank === 'A') points += 1;
-    else if (card.rank === 'K') points += suitCounts[SUITS.indexOf(card.suit)] > 1 ? 0.75 : 0.5;
-    else if (card.rank === 'Q') points += suitCounts[SUITS.indexOf(card.suit)] > 2 ? 0.4 : 0.15;
-  }
-  return Math.min(13, Math.round(points));
-}
-
-function sortedHand(hand) {
-  return [...hand].sort((a, b) => {
-    const suitOrder = SUITS.indexOf(b.suit) - SUITS.indexOf(a.suit);
-    return suitOrder || RANK_VALUES[a.rank] - RANK_VALUES[b.rank];
-  });
-}
-
-/** Creates the state for the start of a hand: waiting for the dealer to deal. */
-function createRound({
-  scores = [0, 0],
-  bags = [0, 0],
-  roundNumber = 1,
-  dealer,
-  overtime = false,
-  difficulty = null,
-}) {
-  return {
-    players: [0, 1, 2, 3].map(() => ({ hand: [], bid: null, tricks: 0 })),
-    scores,
-    bags,
-    roundNumber,
-    dealer,
-    overtime,
-    difficulty,
-    history: [],
-    phase: 'dealing',
-    bidSelection: 3,
-    trick: [],
-    trickNumber: 0,
-    leadSuit: null,
-    turn: dealer,
-    spadesBroken: false,
-    message: `${PLAYER_NAMES[dealer]} deals.`,
-    handResult: [],
-    yourTeamMadeBid: false,
-    popups: [],
-  };
-}
-
-/** Random dealer, zeroed scores. */
-function createGame(difficulty = null) {
-  return createRound({ dealer: Math.floor(Math.random() * 4), difficulty });
-}
-
-/** Shuffles and deals 13 cards to each player, then opens bidding left of the dealer. */
-function dealHand(game) {
-  const deck = shuffle(createDeck());
-  const players = [0, 1, 2, 3].map((i) => ({
-    hand: sortedHand(deck.slice(i * HAND_SIZE, (i + 1) * HAND_SIZE)),
-    bid: null,
-    tricks: 0,
-  }));
-  const first = (game.dealer + 1) % 4;
-  return {
-    ...game,
-    players,
-    phase: 'bidding',
-    bidSelection: estimateBid(players[0].hand),
-    trick: [],
-    trickNumber: 0,
-    leadSuit: null,
-    spadesBroken: false,
-    history: [],
-    turn: first,
-    message: `Bidding starts with ${PLAYER_NAMES[first]}.`,
-  };
-}
-
-/** Records a bid and moves to the next bidder, or starts play once everyone has bid. */
-function applyBid(game, playerIndex, bid) {
-  const players = game.players.map((player, index) =>
-    index === playerIndex ? { ...player, bid } : player
-  );
-  const allBid = players.every((p) => p.bid !== null);
-
-  if (allBid) {
-    // Dealer leads the first trick.
-    return {
-      ...game,
-      players,
-      phase: 'playing',
-      turn: game.dealer,
-      message: `Bids are in. ${PLAYER_NAMES[game.dealer]} leads.`,
-    };
-  }
-  const next = (playerIndex + 1) % 4;
-  return { ...game, players, turn: next, message: `${PLAYER_NAMES[next]} to bid.` };
-}
-
-function legalCards(hand, trick, spadesBroken) {
-  if (trick.length > 0) {
-    const ledSuit = trick[0].card.suit;
-    const followingSuit = hand.filter((card) => card.suit === ledSuit);
-    if (!followingSuit.length) return hand;
-    if (ledSuit === 'S') return followingSuit;
-    return [...followingSuit, ...hand.filter((card) => card.suit === 'S')];
-  }
-  if (!spadesBroken) {
-    const nonSpades = hand.filter((card) => card.suit !== 'S');
-    return nonSpades.length ? nonSpades : hand;
-  }
-  return hand;
-}
-
-/* ------------------------------------------------------------------ */
-/* Bot strategy                                                        */
-/*   easy   - rough bids, random legal cards (ducks when bid nil)      */
-/*   medium - sensible bids, wins cheaply, never overtakes partner     */
-/*   hard   - card counting, void tracking, nil defence, bag control   */
-/* Bots only use their own hand plus cards already played (no peeking).*/
-/* ------------------------------------------------------------------ */
-
-const cardCost = (card) => RANK_VALUES[card.rank] + (card.suit === 'S' ? 20 : 0);
-const lowestCard = (cards) => [...cards].sort((a, b) => cardCost(a) - cardCost(b))[0];
-const highestCard = (cards) => [...cards].sort((a, b) => cardCost(b) - cardCost(a))[0];
-const highestRank = (cards) =>
-  [...cards].sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank])[0];
-
-function trumpStrength(card, leadSuit) {
-  return card.suit === 'S' ? 2 : card.suit === leadSuit ? 1 : 0;
-}
-
-function winningPlay(trick) {
-  const leadSuit = trick[0].card.suit;
-  return trick.reduce((winner, play) => {
-    const s = trumpStrength(play.card, leadSuit);
-    const w = trumpStrength(winner.card, leadSuit);
-    if (s > w) return play;
-    if (s === w && RANK_VALUES[play.card.rank] > RANK_VALUES[winner.card.rank]) return play;
-    return winner;
-  });
-}
-
-function beats(card, play, leadSuit) {
-  const c = trumpStrength(card, leadSuit);
-  const w = trumpStrength(play.card, leadSuit);
-  return c > w || (c === w && c > 0 && RANK_VALUES[card.rank] > RANK_VALUES[play.card.rank]);
-}
-
-/** How many tricks a hand is likely to take, with suit length and ruffing value. */
-function handPoints(hand) {
-  const bySuit = Object.fromEntries(SUITS.map((suit) => [suit, hand.filter((c) => c.suit === suit)]));
-  const spadeCount = bySuit.S.length;
-  let points = 0;
-
-  bySuit.S.forEach((card) => {
-    const v = RANK_VALUES[card.rank];
-    if (v === 14) points += 1;
-    else if (v === 13) points += spadeCount >= 2 ? 0.9 : 0.4;
-    else if (v === 12) points += spadeCount >= 3 ? 0.6 : 0.2;
-    else if (v === 11) points += spadeCount >= 4 ? 0.3 : 0;
-  });
-  points += Math.max(0, spadeCount - 3) * 0.8; // long spades turn into winners
-
-  SUITS.filter((suit) => suit !== 'S').forEach((suit) => {
-    const cards = bySuit[suit];
-    const n = cards.length;
-    cards.forEach((card) => {
-      const v = RANK_VALUES[card.rank];
-      if (v === 14) points += n <= 5 ? 1 : 0.7;
-      else if (v === 13) points += n >= 3 ? 0.7 : n === 2 ? 0.45 : 0.15;
-      else if (v === 12) points += n >= 4 ? 0.3 : 0.1;
-    });
-    if (n === 0 && spadeCount >= 3) points += 1; // can ruff
-    else if (n === 1 && spadeCount >= 4) points += 0.5;
-  });
-  return points;
-}
-
-/** How likely a hand is to be forced to win tricks (low = good nil candidate). */
-function nilDanger(hand) {
-  return hand.reduce((sum, card) => {
-    const v = RANK_VALUES[card.rank];
-    let d = v === 14 ? 3 : v === 13 ? 2 : v === 12 ? 1.2 : v === 11 ? 0.6 : v === 10 ? 0.25 : 0;
-    if (card.suit === 'S' && v >= 9) d += 1.5;
-    return sum + d;
-  }, 0);
-}
-
-function chooseBotBid(game, playerIndex) {
-  const hand = game.players[playerIndex].hand;
-  const level = game.difficulty;
-  const base = estimateBid(hand);
-
-  if (level === 'easy') {
-    const noise = Math.floor(Math.random() * 3) - 1;
-    return Math.max(0, Math.min(13, base + noise));
-  }
-
-  const danger = nilDanger(hand);
-  const spades = hand.filter((c) => c.suit === 'S').length;
-  if (level === 'hard') {
-    if (danger < 3.5 && spades <= 3) return 0;
-  } else if (danger < 4.5) {
-    return 0;
-  }
-
-  let bid = level === 'hard' ? Math.round(handPoints(hand)) : base;
-  if (level === 'hard') {
-    // Everyone bidding more than 13 tricks in total means somebody will miss.
-    const others = game.players.reduce(
-      (sum, p, i) => (i === playerIndex || p.bid === null ? sum : sum + p.bid),
-      0
-    );
-    if (others + bid > 13 && bid > 1) bid -= 1;
-  }
-  return Math.max(1, Math.min(13, bid));
-}
-
-/** What a careful player knows: cards seen so far and which suits each seat has shown void in. */
-function getKnowledge(game, me) {
-  const seen = new Set(game.players[me].hand.map((c) => c.id));
-  const voids = [new Set(), new Set(), new Set(), new Set()];
-  const record = (trick, leadSuit) =>
-    trick.forEach(({ playerIndex, card }) => {
-      seen.add(card.id);
-      if (card.suit !== leadSuit) voids[playerIndex].add(leadSuit);
-    });
-  game.history.forEach((h) => record(h.trick, h.leadSuit));
-  if (game.trick.length) record(game.trick, game.trick[0].card.suit);
-  return { seen, voids };
-}
-
-/** A card nobody can beat: no higher card left in the suit and no opponent able to trump it. */
-function isSafeMaster(card, knowledge, me) {
-  const higherUnseen = RANKS.some(
-    (r) => RANK_VALUES[r] > RANK_VALUES[card.rank] && !knowledge.seen.has(`${r}${card.suit}`)
-  );
-  if (higherUnseen) return false;
-  if (card.suit === 'S') return true;
-  const spadesLeft = RANKS.some((r) => !knowledge.seen.has(`${r}S`));
-  if (!spadesLeft) return true;
-  return [0, 1, 2, 3]
-    .filter((p) => teamOf(p) !== teamOf(me))
-    .every((p) => !knowledge.voids[p].has(card.suit));
-}
-
-/** Tricks the team still needs to make its (non-nil) bid. */
-function tricksNeeded(game, me) {
-  const mates = teamOf(me) === 0 ? [0, 2] : [1, 3];
-  const bid = mates.reduce((sum, i) => sum + (game.players[i].bid || 0), 0);
-  const tricks = mates.reduce(
-    (sum, i) => sum + (game.players[i].bid === 0 ? 0 : game.players[i].tricks),
-    0
-  );
-  return bid - tricks;
-}
-
-function mediumCard(game, me, choices) {
-  const trick = game.trick;
-  if (trick.length === 0) {
-    const nonSpades = choices.filter((c) => c.suit !== 'S');
-    const aces = nonSpades.filter((c) => c.rank === 'A');
-    if (aces.length) return aces[0];
-    return lowestCard(nonSpades.length ? nonSpades : choices);
-  }
-  const leadSuit = trick[0].card.suit;
-  const winner = winningPlay(trick);
-  if (teamOf(winner.playerIndex) === teamOf(me)) return lowestCard(choices); // partner has it
-  const winners = choices.filter((c) => beats(c, winner, leadSuit));
-  return winners.length ? lowestCard(winners) : lowestCard(choices);
-}
-
-function hardCard(game, me, choices) {
-  const knowledge = getKnowledge(game, me);
-  const partner = (me + 2) % 4;
-  const opponents = [(me + 1) % 4, (me + 3) % 4];
-  const nilAlive = (p) => game.players[p].bid === 0 && game.players[p].tricks === 0;
-  const partnerNil = nilAlive(partner);
-  const oppNil = opponents.filter(nilAlive);
-  const need = tricksNeeded(game, me);
-  const bagAvoid = need <= 0 && !partnerNil;
-  const trick = game.trick;
-
-  /* ----- leading ----- */
-  if (trick.length === 0) {
-    const nonSpades = choices.filter((c) => c.suit !== 'S');
-    const lowLead = lowestCard(nonSpades.length ? nonSpades : choices);
-    if (oppNil.length || bagAvoid) return lowLead; // lead low to bust nil / avoid bags
-    const masters = nonSpades.filter((c) => isSafeMaster(c, knowledge, me));
-    if (masters.length) return highestCard(masters);
-    const spadeMasters = choices.filter((c) => c.suit === 'S' && isSafeMaster(c, knowledge, me));
-    if (spadeMasters.length && game.spadesBroken && need > 0) return spadeMasters[0];
-    return lowLead;
-  }
-
-  /* ----- following ----- */
-  const leadSuit = trick[0].card.suit;
-  const winner = winningPlay(trick);
-  const partnerWinning = teamOf(winner.playerIndex) === teamOf(me);
-  const winners = choices.filter((c) => beats(c, winner, leadSuit));
-  const losers = choices.filter((c) => !beats(c, winner, leadSuit));
-  const after = 3 - trick.length; // seats still to play after me
-  const hasPlayed = (p) => trick.some((t) => t.playerIndex === p);
-
-  // Protect a partner's nil: take the trick away from them, or set a high card for them to duck under.
-  if (partnerNil) {
-    if (winner.playerIndex === partner) return winners.length ? lowestCard(winners) : lowestCard(choices);
-    if (!hasPlayed(partner) && winners.length) return highestCard(winners);
-  }
-
-  // Bust an opponent's nil: keep the trick low so they cannot duck, and never take it from them.
-  if (oppNil.length) {
-    const nilStillToPlay = oppNil.some((p) => !hasPlayed(p));
-    const nilWinning = oppNil.includes(winner.playerIndex);
-    if (nilStillToPlay || nilWinning) return lowestCard(choices);
-  }
-
-  // Already made the bid: avoid bags by dumping the highest card that loses.
-  if (bagAvoid) {
-    if (losers.length) {
-      const sideLosers = losers.filter((c) => c.suit !== 'S');
-      return highestCard(sideLosers.length ? sideLosers : losers);
-    }
-    return lowestCard(winners);
-  }
-
-  if (partnerWinning) return lowestCard(choices);
-
-  if (winners.length) {
-    if (after === 0) return lowestCard(winners);
-    const ledWinners = winners.filter((c) => c.suit === leadSuit);
-    if (ledWinners.length) {
-      const secure = ledWinners.filter((c) => isSafeMaster(c, knowledge, me));
-      return secure.length ? lowestCard(secure) : highestCard(ledWinners);
-    }
-    return lowestCard(winners); // cheapest trump
-  }
-  return lowestCard(choices);
-}
-
-function chooseBotCard(game, me) {
-  const player = game.players[me];
-  const level = game.difficulty;
-  const choices = legalCards(player.hand, game.trick, game.spadesBroken);
-  if (choices.length === 1) return choices[0];
-
-  // A bot that bid NIL ducks every trick it can.
-  if (player.bid === 0 && player.tricks === 0) {
-    if (game.trick.length === 0 || level === 'easy') return lowestCard(choices);
-    const leadSuit = game.trick[0].card.suit;
-    const winner = winningPlay(game.trick);
-    const losers = choices.filter((c) => !beats(c, winner, leadSuit));
-    if (!losers.length) return lowestCard(choices);
-    return level === 'hard' ? highestRank(losers) : lowestCard(losers);
-  }
-
-  if (level === 'easy') return choices[Math.floor(Math.random() * choices.length)];
-  return level === 'hard' ? hardCard(game, me, choices) : mediumCard(game, me, choices);
-}
-
-function playCard(game, playerIndex, card) {
-  const players = game.players.map((player, index) =>
-    index === playerIndex
-      ? { ...player, hand: player.hand.filter((handCard) => handCard.id !== card.id) }
-      : player
-  );
-  const trick = [...game.trick, { playerIndex, card }];
-  const nextTurn = (playerIndex + 1) % players.length;
-
-  return {
-    ...game,
-    players,
-    trick,
-    turn: nextTurn,
-    leadSuit: game.leadSuit || card.suit,
-    spadesBroken: game.spadesBroken || card.suit === 'S',
-    message:
-      trick.length === 4
-        ? 'Trick complete — determining the winner...'
-        : `${PLAYER_NAMES[nextTurn]} to play.`,
-  };
-}
-
-function getTrickWinner(trick, leadSuit) {
-  const strength = (play) =>
-    play.card.suit === 'S' ? 2 : play.card.suit === leadSuit ? 1 : 0;
-
-  return trick.reduce((winner, play) => {
-    const s = strength(play);
-    const w = strength(winner);
-    if (s > w) return play;
-    if (s === w && RANK_VALUES[play.card.rank] > RANK_VALUES[winner.card.rank]) return play;
-    return winner;
-  }).playerIndex;
-}
-
-/**
- * 500+ ends the game. Higher score wins. Tied at 500+ means overtime (keep playing).
- */
-function getGameStatus(scores) {
-  const [you, bots] = scores;
-  if (Math.max(you, bots) < WINNING_SCORE) return { over: false, overtime: false, winner: null };
-  if (you === bots) return { over: false, overtime: true, winner: null };
-  return { over: true, overtime: false, winner: you > bots ? 0 : 1 };
-}
-
-function scoreHand(game) {
-  const nextScores = [...game.scores];
-  const nextBags = [...game.bags];
-  const lines = [];
-  const popups = [];
-
-  const teamPlayers = (team) => (team === 0 ? [0, 2] : [1, 3]);
-  const teamTricks = [0, 1].map((team) =>
-    teamPlayers(team).reduce((sum, i) => sum + game.players[i].tricks, 0)
-  );
-
-  /* ----- Boston: one team took all 13 tricks ----- */
-  const bostonTeam = teamTricks.findIndex((t) => t === TRICKS_PER_HAND);
-  if (bostonTeam !== -1) {
-    nextScores[bostonTeam] += 100;
-    popups.push({
-      title: 'BOSTON!',
-      body: `${teamLabel(bostonTeam)} took all 13 tricks and scores +100. The other team scores 0 this hand.`,
-    });
-    lines.push(`BOSTON! ${teamLabel(bostonTeam)} ${signed(100)}`);
-    lines.push(`${teamLabel(1 - bostonTeam)} +0`);
-    return {
-      scores: nextScores,
-      bags: nextBags,
-      lines,
-      popups,
-      yourTeamMadeBid: bostonTeam === 0,
-    };
-  }
-
-  /* ----- Normal scoring ----- */
-  let yourTeamMadeBid = false;
-
-  [0, 1].forEach((team) => {
-    const players = teamPlayers(team);
-    const previousScore = nextScores[team];
-    const regularBid = players.reduce((sum, i) => sum + (game.players[i].bid || 0), 0);
-    const nilPlayers = players.filter((i) => game.players[i].bid === 0);
-    const nilTricks = nilPlayers.reduce((sum, i) => sum + game.players[i].tricks, 0);
-    const regularTricks = Math.max(0, teamTricks[team] - nilTricks);
-    const madeBid = regularTricks >= regularBid;
-    if (team === 0) yourTeamMadeBid = madeBid;
-
-    const details = [];
-    const overtricks = Math.max(0, regularTricks - regularBid);
-
-    if (madeBid) {
-      nextScores[team] += regularBid * 10 + overtricks;
-      nextBags[team] += overtricks;
-      if (regularBid > 0 || overtricks > 0) {
-        details.push(
-          `Bid ${regularBid}, took ${regularTricks}${overtricks ? ` (${overtricks} ${overtricks === 1 ? 'bag' : 'bags'})` : ''}`
-        );
-      }
-    } else {
-      nextScores[team] -= regularBid * 10;
-      details.push(`Bid ${regularBid}, took ${regularTricks} — missed`);
-    }
-
-    nilPlayers.forEach((i) => {
-      const success = game.players[i].tricks === 0;
-      nextScores[team] += success ? 100 : -100;
-      details.push(`${SEATS[i]}: ${success ? 'NIL SUCCESS +100' : 'NIL FAILURE −100'}`);
-    });
-
-    if (nextBags[team] >= 10) {
-      const penalties = Math.floor(nextBags[team] / 10);
-      nextScores[team] -= penalties * 100;
-      nextBags[team] -= penalties * 10;
-      details.push(`BAG PENALTY −${penalties * 100}`);
-      popups.push({
-        title: 'BAG PENALTY',
-        body: `${teamLabel(team)} collected 10 bags and lose ${penalties * 100} points.`,
-      });
-    }
-
-    const delta = nextScores[team] - previousScore;
-    lines.push(`${teamLabel(team)} ${signed(delta)}`);
-    details.forEach((d) => lines.push(`   ${d}`));
-  });
-
-  return { scores: nextScores, bags: nextBags, lines, popups, yourTeamMadeBid };
-}
-
-function finishTrick(game) {
-  const winner = getTrickWinner(game.trick, game.leadSuit);
-  const players = game.players.map((player, index) =>
-    index === winner ? { ...player, tricks: player.tricks + 1 } : player
-  );
-  const trickNumber = game.trickNumber + 1;
-  const history = [...game.history, { trick: game.trick, leadSuit: game.leadSuit }];
-
-  if (trickNumber === TRICKS_PER_HAND) {
-    const scored = scoreHand({ ...game, players });
-    const status = getGameStatus(scored.scores);
-    const popups = [...scored.popups];
-    if (status.overtime && !game.overtime) {
-      popups.push({
-        title: 'OVERTIME',
-        body: `Both teams are tied at ${scored.scores[0]}. Play continues until one team is ahead after a hand.`,
-      });
-    }
-    return {
-      ...game,
-      players,
-      history,
-      scores: scored.scores,
-      bags: scored.bags,
-      handResult: scored.lines,
-      yourTeamMadeBid: scored.yourTeamMadeBid,
-      popups,
-      overtime: status.overtime || (game.overtime && !status.over),
-      phase: 'roundOver',
-      trick: [],
-      trickNumber,
-      leadSuit: null,
-      turn: winner,
-      message: `Hand complete. ${PLAYER_NAMES[winner]} won the last trick.`,
-    };
-  }
-
-  return {
-    ...game,
-    players,
-    history,
-    phase: 'playing',
-    trick: [],
-    trickNumber,
-    leadSuit: null,
-    turn: winner,
-    message: `${PLAYER_NAMES[winner]} won the trick and leads.`,
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Frutiger Aero primitives: glass and gloss buttons                     */
-/* ------------------------------------------------------------------ */
-
-const SIDE_W = 72; // width of the West / East badges
-const TOP_INSET = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 54;
-
-// Vertical offsets for cards in the hand. The selected card pops up in place,
-// so there is no separate preview row taking up space.
-const REST_TOP = 20; // cards you cannot play
-const PLAYABLE_TOP = 12; // cards you can play sit slightly higher
-const SELECTED_TOP = 0; // the selected card lifts fully above the fan
-
-const CARD_ENTERING = FadeInUp.duration(220);
-const HAND_LAYOUT = LinearTransition.duration(220).easing(Easing.inOut(Easing.quad));
-
-function Glass({ children, style, tint = COLORS.glassLight, radius = 20, gloss = true }) {
-  return (
-    <View style={[styles.glass, { backgroundColor: tint, borderRadius: radius }, style]}>
-      {gloss && <View pointerEvents="none" style={styles.gloss} />}
-      {children}
-    </View>
-  );
-}
-
-function GlossButton({
-  label,
-  onPress,
-  variant = 'green',
-  small = false,
-  disabled = false,
-  accessibilityLabel,
-  style,
-}) {
-  const colors =
-    variant === 'green'
-      ? { bg: COLORS.limeDark, rim: COLORS.limeGlow }
-      : { bg: COLORS.aquaDark, rim: COLORS.aquaRim };
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || label}
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={6}
-      style={({ pressed }) => [
-        styles.glossButton,
-        small && styles.glossButtonSmall,
-        { backgroundColor: colors.bg, borderColor: colors.rim },
-        disabled && styles.disabledButton,
-        pressed && styles.pressed,
-        style,
-      ]}
-    >
-      <View pointerEvents="none" style={styles.glossButtonShine} />
-      <Text style={[styles.glossButtonText, small && styles.glossButtonTextSmall]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function PlayerBadge({ player, playerIndex, isTurn, isDealer, horizontal }) {
-  return (
-    <View
-      style={[
-        styles.badge,
-        horizontal ? styles.badgeH : styles.badgeV,
-        isTurn && styles.badgeActive,
-      ]}
-    >
-      <View style={styles.fishFrame}>
-        <FishSprite
-          fishKey={PLAYER_FISH[playerIndex]}
-          width={40}
-          mirror={playerIndex === 3}
-          style={styles.fish}
-        />
-      </View>
-      <View style={horizontal ? styles.badgeTextH : styles.badgeTextV}>
-        <Text style={styles.playerName} numberOfLines={1}>
-          {SEATS[playerIndex]} · {SEAT_TAGS[playerIndex]}
-        </Text>
-        <Text style={styles.playerStats} numberOfLines={1}>
-          Bid {formatBid(player.bid)} · {player.tricks} won
-        </Text>
-      </View>
-      {isDealer && (
-        <View accessibilityLabel="Dealer" style={styles.dealerChip}>
-          <Text style={styles.dealerChipText}>D</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-/** Compass positions for the cards in the middle of the table. */
-function trickSeatStyle(seat, w, h) {
-  switch (seat) {
-    case 0:
-      return { bottom: 8, left: '50%', marginLeft: -w / 2 };
-    case 1:
-      return { left: 6, top: '50%', marginTop: -h / 2 };
-    case 2:
-      return { top: 8, left: '50%', marginLeft: -w / 2 };
-    default:
-      return { right: 6, top: '50%', marginTop: -h / 2 };
-  }
-}
-
-function InfoModal({ visible, title, children, buttonLabel, onPress }) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onPress}>
-      <View style={styles.modalBackdrop}>
-        <Glass tint={COLORS.modalGlass} radius={28} style={styles.modalCard}>
-          <Text accessibilityRole="header" style={styles.modalTitle}>
-            {title}
-          </Text>
-          {children}
-          <GlossButton label={buttonLabel} onPress={onPress} style={styles.modalButton} />
-        </Glass>
-      </View>
-    </Modal>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Screen                                                              */
-/* ------------------------------------------------------------------ */
+import {
+  DIFFICULTIES,
+  HAND_SIZE,
+  PLAYER_NAMES,
+  RULES_SECTIONS,
+  SUIT_NAMES,
+  TRICKS_PER_HAND,
+} from '../constants/gameConstants';
+import GameTable from '../components/GameTable';
+import PlayerHand from '../components/PlayerHand';
+import { Glass, GlossButton, InfoModal } from '../components/SpadesUI';
+import WaterBackground from '../components/aquarium/WaterBackground';
+import { chooseBotBid, chooseBotCard } from '../logic/botLogic';
+import {
+  applyBid,
+  createGame,
+  createRound,
+  dealHand,
+  finishTrick,
+  playCard,
+} from '../logic/gameLogic';
+import { legalCards } from '../logic/cardUtils';
+import { getGameStatus } from '../logic/scoring';
+
+const TOP_INSET = Platform.OS === 'android' ? StatusBar.currentHeight || 28 : 54;
+const SIDE_W = 72;
 
 export default function SpadesScreen({ navigation }) {
   const [game, setGame] = useState(() => createGame());
@@ -867,7 +44,6 @@ export default function SpadesScreen({ navigation }) {
   const [selectedCardId, setSelectedCardId] = useState(null);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
-  /* ----- responsive sizing: everything must fit one screen, no scrolling ----- */
   const sizes = useMemo(() => {
     const availW = windowWidth - 24;
     const handCardW = Math.max(
@@ -875,7 +51,6 @@ export default function SpadesScreen({ navigation }) {
       Math.min(64, Math.floor(availW * 0.165), Math.floor(windowHeight * 0.075))
     );
     const handCardH = Math.round(handCardW * 1.49);
-    // 13 cards overlap in a single fanned row sized to the screen width.
     const step = Math.min(handCardW + 4, (availW - 16 - handCardW) / (HAND_SIZE - 1));
     const trickW = Math.max(
       30,
@@ -885,15 +60,23 @@ export default function SpadesScreen({ navigation }) {
         Math.floor(windowHeight * 0.075)
       )
     );
-    return { handCardW, handCardH, step, trickW, trickH: Math.round(trickW * 1.49) };
+    return {
+      handCardW,
+      handCardH,
+      step,
+      trickW,
+      trickH: Math.round(trickW * 1.49),
+      restTop: 20,
+      playableTop: 12,
+      selectedTop: 0,
+    };
   }, [windowWidth, windowHeight]);
 
-  /* ----- bot driver: dealing, bidding, and playing ----- */
   useEffect(() => {
-    if (!game.difficulty) return undefined; // wait for the player to choose a level
+    if (!game.difficulty) return undefined;
 
     if (game.phase === 'dealing') {
-      if (game.dealer === 0) return undefined; // the user deals with the Deal button
+      if (game.dealer === 0) return undefined;
       const timer = setTimeout(
         () => setGame((current) => (current.phase === 'dealing' ? dealHand(current) : current)),
         1000
@@ -923,7 +106,6 @@ export default function SpadesScreen({ navigation }) {
     }
 
     if (game.turn === 0) return undefined;
-
     const timer = setTimeout(() => {
       setGame((current) => {
         if (current.phase !== 'playing' || current.turn === 0 || current.trick.length === 4) {
@@ -935,7 +117,6 @@ export default function SpadesScreen({ navigation }) {
     return () => clearTimeout(timer);
   }, [game]);
 
-  /* ----- actions ----- */
   const onDeal = useCallback(() => {
     setGame((current) =>
       current.phase === 'dealing' && current.dealer === 0 ? dealHand(current) : current
@@ -957,8 +138,8 @@ export default function SpadesScreen({ navigation }) {
     }));
   }, []);
 
-  // Dealer rotates clockwise after every hand, regardless of who won tricks.
   const nextHand = useCallback(() => {
+    setSelectedCardId(null);
     setGame((current) =>
       createRound({
         scores: current.scores,
@@ -971,8 +152,10 @@ export default function SpadesScreen({ navigation }) {
     );
   }, []);
 
-  // A new game goes back to the difficulty picker.
-  const newGame = useCallback(() => setGame(createGame()), []);
+  const newGame = useCallback(() => {
+    setSelectedCardId(null);
+    setGame(createGame());
+  }, []);
 
   const chooseDifficulty = useCallback((level) => {
     setGame((current) => ({ ...current, difficulty: level }));
@@ -982,16 +165,13 @@ export default function SpadesScreen({ navigation }) {
     setGame((current) => ({ ...current, popups: current.popups.slice(1) }));
   }, []);
 
-  /* ----- derived state ----- */
   const playerHand = game.players[0].hand;
   const myTurnToPlay = game.phase === 'playing' && game.turn === 0 && game.trick.length < 4;
   const playable = useMemo(() => {
     if (!myTurnToPlay) return [];
     return legalCards(playerHand, game.trick, game.spadesBroken);
   }, [myTurnToPlay, game.trick, game.spadesBroken, playerHand]);
-
-  const playableIds = useMemo(() => new Set(playable.map((c) => c.id)), [playable]);
-  // Only treat a card as selected while it is actually playable.
+  const playableIds = useMemo(() => new Set(playable.map((card) => card.id)), [playable]);
   const selectedCard = playerHand.find(
     (card) => card.id === selectedCardId && playableIds.has(card.id)
   );
@@ -1005,9 +185,7 @@ export default function SpadesScreen({ navigation }) {
           if (current.phase !== 'playing' || current.turn !== 0 || current.trick.length >= 4) {
             return current;
           }
-          const currentCard = current.players[0].hand.find(
-            (handCard) => handCard.id === card.id
-          );
+          const currentCard = current.players[0].hand.find((handCard) => handCard.id === card.id);
           if (!currentCard) return current;
           const currentPlayableCards = legalCards(
             current.players[0].hand,
@@ -1019,9 +197,9 @@ export default function SpadesScreen({ navigation }) {
           }
           return playCard(current, 0, currentCard);
         });
-        return;
+      } else {
+        setSelectedCardId(card.id);
       }
-      setSelectedCardId(card.id);
     },
     [playableIds, selectedCardId]
   );
@@ -1031,11 +209,8 @@ export default function SpadesScreen({ navigation }) {
   const status = getGameStatus(game.scores);
   const gameOver = game.phase === 'roundOver' && status.over;
   const youWon = status.winner === 0;
-
   const turnLabel = useMemo(() => {
-    if (game.phase === 'dealing') {
-      return game.dealer === 0 ? 'Your deal' : 'Waiting for dealer';
-    }
+    if (game.phase === 'dealing') return game.dealer === 0 ? 'Your deal' : 'Waiting for dealer';
     if (game.phase === 'bidding') {
       return game.turn === 0 ? 'Set your bid' : `${PLAYER_NAMES[game.turn]} is bidding`;
     }
@@ -1046,7 +221,6 @@ export default function SpadesScreen({ navigation }) {
     if (game.turn === 0) return `Your turn · Trick ${game.trickNumber + 1}/${TRICKS_PER_HAND}`;
     return `${PLAYER_NAMES[game.turn]} is playing`;
   }, [game.phase, game.turn, game.dealer, game.trickNumber, gameOver, youWon]);
-
   const hint = myTurnToPlay
     ? selectedCard
       ? `Selected ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]} · tap again to play`
@@ -1054,23 +228,8 @@ export default function SpadesScreen({ navigation }) {
         ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit or trump with a spade`
         : 'You lead · tap a glowing card to select it'
     : game.message;
-
   const currentPopup = game.popups[0];
   const showGameOver = gameOver && game.popups.length === 0;
-
-  const renderBadge = (playerIndex, horizontal = false) => (
-    <PlayerBadge
-      player={game.players[playerIndex]}
-      playerIndex={playerIndex}
-      horizontal={horizontal}
-      isTurn={
-        (game.phase === 'playing' || game.phase === 'bidding') && game.turn === playerIndex
-      }
-      isDealer={game.dealer === playerIndex}
-    />
-  );
-
-  const handWidth = sizes.step * (HAND_SIZE - 1) + sizes.handCardW;
 
   return (
     <WaterBackground
@@ -1078,7 +237,6 @@ export default function SpadesScreen({ navigation }) {
       imageSource={require('../../assets/images/backgrounds/gameOcean.jpg')}
     >
       <View style={styles.content}>
-        {/* top bar */}
         <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
@@ -1101,201 +259,38 @@ export default function SpadesScreen({ navigation }) {
           </Pressable>
         </View>
 
-        {/* score strip */}
-        <Glass tint={COLORS.glassStrong} radius={20} gloss={false} style={styles.scoreCard}>
-          <View style={styles.scoreTeam}>
-            <Text style={styles.scoreLabel}>Your team</Text>
-            <Text style={styles.score}>{yourScore}</Text>
-            <Text style={styles.scoreDetail}>{game.bags[0]} bags</Text>
-          </View>
-          <View style={styles.scoreMiddle}>
-            <Text style={styles.scoreDetail}>
-              Hand {game.roundNumber}
-              {game.difficulty ? ` · ${DIFFICULTY_LABELS[game.difficulty]}` : ''}
-            </Text>
-            {game.overtime && !gameOver && <Text style={styles.overtime}>OVERTIME</Text>}
-          </View>
-          <View style={styles.scoreTeam}>
-            <Text style={styles.scoreLabel}>Them</Text>
-            <Text style={styles.score}>{botScore}</Text>
-            <Text style={styles.scoreDetail}>{game.bags[1]} bags</Text>
-          </View>
-        </Glass>
+        <GameTable
+          game={game}
+          yourScore={yourScore}
+          botScore={botScore}
+          turnLabel={turnLabel}
+          hint={hint}
+          sizes={sizes}
+          gameOver={gameOver}
+          youWon={youWon}
+          onDeal={onDeal}
+          adjustBid={adjustBid}
+          submitBid={submitBid}
+          newGame={newGame}
+          nextHand={nextHand}
+          styles={styles}
+        />
 
-        {/* table */}
-        <Glass tint={COLORS.glassDeep} radius={28} gloss={false} style={styles.table}>
-          <Glass tint={COLORS.glassStrong} radius={16} gloss={false} style={styles.statusPill}>
-            <Text style={styles.statusTitle} numberOfLines={1}>
-              {turnLabel}
-            </Text>
-            <Text style={styles.statusHint} numberOfLines={1}>
-              {hint}
-            </Text>
-          </Glass>
-
-          <View style={styles.northWrap}>{renderBadge(2, true)}</View>
-
-          <View style={styles.middleRow}>
-            <View style={styles.sideWrap}>{renderBadge(1)}</View>
-
-            <Glass tint={COLORS.glassSubtle} radius={22} gloss={false} style={styles.trickArea}>
-              {game.trick.map(({ playerIndex, card }) => (
-                <Animated.Image
-                  key={`${playerIndex}-${card.id}`}
-                  entering={CARD_ENTERING}
-                  source={CARD_IMAGES[card.id]}
-                  resizeMode="contain"
-                  style={[
-                    styles.trickImage,
-                    { width: sizes.trickW, height: sizes.trickH },
-                    trickSeatStyle(playerIndex, sizes.trickW, sizes.trickH),
-                  ]}
-                />
-              ))}
-
-              {game.trick.length === 0 && game.phase === 'dealing' &&
-                (game.dealer === 0 ? (
-                  <GlossButton label="Deal" onPress={onDeal} accessibilityLabel="Deal the cards" />
-                ) : (
-                  <Text style={styles.centerText}>Waiting for dealer</Text>
-                ))}
-
-              {game.phase === 'bidding' &&
-                (game.turn === 0 ? (
-                  <View style={styles.bidPanel}>
-                    <Text style={styles.bidLabel}>Your bid</Text>
-                    <View style={styles.bidRow}>
-                      <GlossButton
-                        label="-"
-                        variant="aqua"
-                        accessibilityLabel="Lower bid"
-                        disabled={game.bidSelection === 0}
-                        onPress={() => adjustBid(-1)}
-                        style={styles.bidAdjust}
-                      />
-                      <Text style={styles.bidNumber}>{formatBid(game.bidSelection)}</Text>
-                      <GlossButton
-                        label="+"
-                        variant="aqua"
-                        accessibilityLabel="Raise bid"
-                        disabled={game.bidSelection === 13}
-                        onPress={() => adjustBid(1)}
-                        style={styles.bidAdjust}
-                      />
-                    </View>
-                    <GlossButton
-                      label="Bid"
-                      accessibilityLabel={`Confirm bid of ${formatBid(game.bidSelection)}`}
-                      onPress={submitBid}
-                      style={styles.bidConfirm}
-                    />
-                  </View>
-                ) : (
-                  <Text style={styles.centerText}>Bidding…</Text>
-                ))}
-
-              {game.phase === 'playing' && game.trick.length === 0 && (
-                <Text style={styles.centerText}>
-                  {game.turn === 0 ? 'Play a card' : 'Waiting for a card'}
-                </Text>
-              )}
-            </Glass>
-
-            <View style={styles.sideWrap}>{renderBadge(3)}</View>
-          </View>
-
-          <View style={styles.southWrap}>{renderBadge(0, true)}</View>
-
-          {/* hand result, laid over the table so the layout never grows */}
-          {game.phase === 'roundOver' && (
-            <View style={styles.resultOverlay}>
-              <Glass tint={COLORS.resultGlass} radius={24} style={styles.resultCard}>
-                <Text
-                  accessibilityRole="header"
-                  style={[
-                    styles.handOutcome,
-                    game.yourTeamMadeBid ? styles.handWon : styles.handMissed,
-                  ]}
-                >
-                  {game.yourTeamMadeBid ? 'You won this hand!' : 'You missed your bid'}
-                </Text>
-                {game.handResult.map((line, i) => (
-                  <Text key={`${i}-${line}`} style={styles.resultText}>
-                    {line}
-                  </Text>
-                ))}
-                <GlossButton
-                  label={gameOver ? 'New game' : 'Next hand'}
-                  onPress={gameOver ? newGame : nextHand}
-                  style={styles.resultButton}
-                />
-              </Glass>
-            </View>
-          )}
-        </Glass>
-
-        {/* hand: one fanned row; the selected card lifts in place */}
-        <Glass tint={COLORS.glassMedium} radius={22} gloss={false} style={styles.handShelf}>
-          <View
-            style={{
-              width: Math.max(handWidth, 1),
-              height: sizes.handCardH + REST_TOP,
-              justifyContent: 'center',
-            }}
-          >
-            {playerHand.map((card, index) => {
-              const canPlay = playableIds.has(card.id);
-              const dimmed = myTurnToPlay && !canPlay;
-              const selected = canPlay && selectedCardId === card.id;
-              return (
-                <Animated.View
-                  key={card.id}
-                  layout={HAND_LAYOUT}
-                  style={[
-                    styles.handCard,
-                    {
-                      width: sizes.handCardW,
-                      height: sizes.handCardH,
-                      left: index * sizes.step,
-                      top: selected ? SELECTED_TOP : canPlay ? PLAYABLE_TOP : REST_TOP,
-                      zIndex: selected ? HAND_SIZE + 1 : index,
-                    },
-                    canPlay && styles.playableCard,
-                    selected && styles.selectedHandCard,
-                  ]}
-                >
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${card.rank} of ${SUIT_NAMES[card.suit]}${
-                      selected ? ', selected; tap again to play' : canPlay ? ', tap to select' : ''
-                    }`}
-                    disabled={!canPlay}
-                    onPress={() => onHandCardPress(card)}
-                    style={StyleSheet.absoluteFill}
-                  >
-                    <Image
-                      source={CARD_IMAGES[card.id]}
-                      resizeMode="contain"
-                      style={styles.handImage}
-                    />
-                    {dimmed && <View pointerEvents="none" style={styles.dimOverlay} />}
-                  </Pressable>
-                </Animated.View>
-              );
-            })}
-            {playerHand.length === 0 && (
-              <Text style={styles.emptyHand}>
-                {game.phase === 'dealing' ? 'Cards appear after the deal' : 'Your hand is empty'}
-              </Text>
-            )}
-          </View>
-        </Glass>
+        <PlayerHand
+          cards={playerHand}
+          selectedCardId={selectedCardId}
+          playableIds={playableIds}
+          isTurn={myTurnToPlay}
+          phase={game.phase}
+          sizes={sizes}
+          onCardPress={onHandCardPress}
+          styles={styles}
+        />
       </View>
 
-      {/* Difficulty picker: shown when the screen opens and before every new game */}
       <Modal visible={!game.difficulty} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.modalBackdrop}>
-          <Glass tint={COLORS.modalGlass} radius={28} style={styles.modalCard}>
+          <Glass tint={COLORS.modalGlass} radius={28} style={styles.modalCard} styles={styles}>
             <Text accessibilityRole="header" style={styles.modalTitle}>
               Choose difficulty
             </Text>
@@ -1321,7 +316,6 @@ export default function SpadesScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Rules / tutorial */}
       <Modal
         visible={rulesOpen}
         transparent
@@ -1329,7 +323,12 @@ export default function SpadesScreen({ navigation }) {
         onRequestClose={() => setRulesOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <Glass tint={COLORS.modalGlass} radius={28} style={[styles.modalCard, styles.rulesCard]}>
+          <Glass
+            tint={COLORS.modalGlass}
+            radius={28}
+            style={[styles.modalCard, styles.rulesCard]}
+            styles={styles}
+          >
             <Text accessibilityRole="header" style={styles.modalTitle}>
               Rules &amp; how to play
             </Text>
@@ -1341,23 +340,33 @@ export default function SpadesScreen({ navigation }) {
                 </View>
               ))}
             </ScrollView>
-            <GlossButton label="Got it" onPress={() => setRulesOpen(false)} style={styles.modalButton} />
+            <GlossButton
+              label="Got it"
+              onPress={() => setRulesOpen(false)}
+              style={styles.modalButton}
+              styles={styles}
+            />
           </Glass>
         </View>
       </Modal>
 
-      {/* Boston / bag penalty / overtime popups, shown one at a time */}
       <InfoModal
         visible={Boolean(currentPopup)}
         title={currentPopup?.title ?? ''}
         buttonLabel="OK"
         onPress={dismissPopup}
+        styles={styles}
       >
         <Text style={styles.modalBody}>{currentPopup?.body}</Text>
       </InfoModal>
 
-      {/* Game over */}
-      <InfoModal visible={showGameOver} title="Game over" buttonLabel="New game" onPress={newGame}>
+      <InfoModal
+        visible={showGameOver}
+        title="Game over"
+        buttonLabel="New game"
+        onPress={newGame}
+        styles={styles}
+      >
         <Text style={styles.modalWinner}>{youWon ? 'Your team wins!' : 'Them wins'}</Text>
         <Text style={styles.modalBody}>
           Winning score: {status.winner === null ? '' : game.scores[status.winner]}
