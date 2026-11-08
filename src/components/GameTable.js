@@ -1,12 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FadeInUp } from 'react-native-reanimated';
 import { DIFFICULTY_LABELS, SUIT_NAMES } from '../constants/gameConstants';
-import { COLORS } from '../constants/theme';
 import { formatBid } from '../logic/cardUtils';
 import Card from './Card';
-import { Glass, GlossButton, PlayerBadge } from './SpadesUI';
+import { AERO, Glass, GlossButton, PlayerBadge } from './SpadesUI';
 
 const CARD_ENTERING = FadeInUp.duration(220);
+const PREVIEW_HALO = [[7, 0.1], [4, 0.18], [2, 0.3]];
 
 function trickSeatStyle(seat, width, height) {
   switch (seat) {
@@ -53,28 +53,36 @@ export default function GameTable({
 
   return (
     <>
-      <Glass tint={COLORS.glassStrong} radius={20} gloss={false} style={styles.scoreCard} styles={styles}>
+      <Glass tint={AERO.panel} radius={24} style={styles.scoreCard} styles={styles}>
         <View style={styles.scoreTeam}>
           <Text style={styles.scoreLabel}>Your team</Text>
           <Text style={styles.score}>{yourScore}</Text>
-          <Text style={styles.scoreDetail}>{game.bags[0]} bags</Text>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>{game.bags[0]} bags</Text>
+          </View>
         </View>
+        <View style={styles.scoreDivider} />
         <View style={styles.scoreMiddle}>
-          <Text style={styles.scoreDetail}>
-            Hand {game.roundNumber}
-            {game.difficulty ? ` · ${DIFFICULTY_LABELS[game.difficulty]}` : ''}
-          </Text>
+          <Text style={styles.handLabel}>Hand {game.roundNumber}</Text>
+          {game.difficulty && (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{DIFFICULTY_LABELS[game.difficulty]}</Text>
+            </View>
+          )}
           {game.overtime && !gameOver && <Text style={styles.overtime}>OVERTIME</Text>}
         </View>
+        <View style={styles.scoreDivider} />
         <View style={styles.scoreTeam}>
           <Text style={styles.scoreLabel}>Them</Text>
           <Text style={styles.score}>{botScore}</Text>
-          <Text style={styles.scoreDetail}>{game.bags[1]} bags</Text>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>{game.bags[1]} bags</Text>
+          </View>
         </View>
       </Glass>
 
-      <Glass tint={COLORS.glassDeep} radius={28} gloss={false} style={styles.table} styles={styles}>
-        <Glass tint={COLORS.glassStrong} radius={16} gloss={false} style={styles.statusPill} styles={styles}>
+      <Glass tint={AERO.panel} radius={24} style={styles.table} styles={styles}>
+        <Glass tint={AERO.panelSoft} radius={999} style={styles.statusPill} styles={styles}>
           <Text style={styles.statusTitle} numberOfLines={1}>
             {turnLabel}
           </Text>
@@ -87,13 +95,13 @@ export default function GameTable({
         <View style={styles.middleRow}>
           <View style={styles.sideWrap}>{renderBadge(1)}</View>
 
-          <Glass tint={COLORS.glassSubtle} radius={22} gloss={false} style={styles.trickArea} styles={styles}>
+          <Glass tint={AERO.well} radius={20} gloss={false} style={styles.trickArea} styles={styles}>
             {game.trick.map(({ playerIndex, card }) => (
               <Card
                 key={`${playerIndex}-${card.id}`}
                 card={card}
                 entering={CARD_ENTERING}
-                imageStyle={StyleSheet.absoluteFill}
+                imageStyle={{ width: sizes.trickW, height: sizes.trickH }}
                 style={[
                   styles.trickImage,
                   { width: sizes.trickW, height: sizes.trickH },
@@ -117,11 +125,12 @@ export default function GameTable({
             {game.phase === 'bidding' &&
               (game.turn === 0 ? (
                 <View style={styles.bidPanel}>
-                  <Text style={styles.bidLabel}>Your bid</Text>
-                  <View style={styles.bidRow}>
+                  <Text style={styles.bidLabel}>YOUR BID</Text>
+                  <View style={styles.stepper}>
                     <GlossButton
-                      label="-"
+                      label="−"
                       variant="aqua"
+                      textStyle={styles.bidAdjustText}
                       accessibilityLabel="Lower bid"
                       disabled={game.bidSelection === 0}
                       onPress={() => adjustBid(-1)}
@@ -132,6 +141,7 @@ export default function GameTable({
                     <GlossButton
                       label="+"
                       variant="aqua"
+                      textStyle={styles.bidAdjustText}
                       accessibilityLabel="Raise bid"
                       disabled={game.bidSelection === 13}
                       onPress={() => adjustBid(1)}
@@ -158,34 +168,55 @@ export default function GameTable({
             )}
 
             {selectedCard && (
-              <View style={styles.previewOverlay}>
-                <View pointerEvents="none" style={styles.previewDim} />
-                <Card
-                  card={selectedCard}
-                  imageStyle={StyleSheet.absoluteFill}
-                  style={[
-                    styles.previewCard,
-                    { width: sizes.trickW * 1.5, height: sizes.trickH * 1.5 },
-                  ]}
-                />
-                <View style={styles.previewActions}>
-                  <GlossButton
-                    label="Play"
-                    small
-                    accessibilityLabel={`Play ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]}`}
-                    onPress={() => onPlayCard(selectedCard)}
-                    styles={styles}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Cancel card selection"
-                    onPress={onCancelCard}
-                    hitSlop={8}
-                  >
-                    <Text style={styles.previewCancel}>Cancel</Text>
-                  </Pressable>
+              <>
+                <View pointerEvents="none" style={styles.trickDim} />
+                <View style={styles.previewWrap}>
+                  <View style={styles.previewCardSlot}>
+                    <View style={{ width: sizes.previewW, height: sizes.previewH }}>
+                      {PREVIEW_HALO.map(([spread, alpha]) => (
+                        <View
+                          key={spread}
+                          pointerEvents="none"
+                          style={[
+                            styles.halo,
+                            {
+                              backgroundColor: `rgba(255,255,255,${alpha})`,
+                              bottom: -spread,
+                              left: -spread,
+                              right: -spread,
+                              top: -spread,
+                            },
+                          ]}
+                        />
+                      ))}
+                      <Card
+                        card={selectedCard}
+                        imageStyle={[
+                          styles.previewImage,
+                          { width: sizes.previewW, height: sizes.previewH },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.previewActions}>
+                    <GlossButton
+                      label="Play"
+                      small
+                      accessibilityLabel={`Play ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]}`}
+                      onPress={() => onPlayCard(selectedCard)}
+                      styles={styles}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel card selection"
+                      onPress={onCancelCard}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.previewCancel}>Cancel</Text>
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
+              </>
             )}
           </Glass>
 
@@ -195,7 +226,7 @@ export default function GameTable({
 
         {game.phase === 'roundOver' && (
           <View style={styles.resultOverlay}>
-            <Glass tint={COLORS.resultGlass} radius={24} style={styles.resultCard} styles={styles}>
+            <Glass tint={AERO.panel} radius={24} style={styles.resultCard} styles={styles}>
               <Text
                 accessibilityRole="header"
                 style={[

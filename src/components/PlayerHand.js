@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 import { Easing, FadeInUp, LinearTransition } from 'react-native-reanimated';
 import { HAND_SIZE, SUIT_NAMES } from '../constants/gameConstants';
 import Card from './Card';
+import { AERO, Glass } from './SpadesUI';
 
 const CARD_ENTERING = FadeInUp.duration(220);
 const HAND_LAYOUT = LinearTransition.duration(220).easing(Easing.inOut(Easing.quad));
@@ -16,10 +17,16 @@ export default function PlayerHand({
   onCardPress,
   styles,
 }) {
-  const handWidth = sizes.step * (HAND_SIZE - 1) + sizes.handCardW;
+  const handWidth =
+    cards.length > 0 ? sizes.step * (cards.length - 1) + sizes.handCardW : 0;
 
   return (
-    <View style={[styles.handShelf, { alignItems: 'center' }]}>
+    <Glass
+      tint={AERO.panel}
+      radius={24}
+      style={[styles.handShelf, { alignItems: 'center' }]}
+      styles={styles}
+    >
       <View
         style={{
           width: Math.max(handWidth, 1),
@@ -38,12 +45,11 @@ export default function PlayerHand({
               entering={CARD_ENTERING}
               layout={HAND_LAYOUT}
               accessibilityLabel={`${card.rank} of ${SUIT_NAMES[card.suit]}${
-                selected ? ', selected; tap again to play' : canPlay ? ', tap to select' : ''
+                selected ? ', selected; tap Play to confirm' : canPlay ? ', tap to preview' : ''
               }`}
               disabled={!canPlay}
               onPress={() => onCardPress(card)}
               imageStyle={styles.handImage}
-              overlayStyle={dimmed ? styles.dimOverlay : undefined}
               style={[
                 styles.handCard,
                 {
@@ -58,7 +64,8 @@ export default function PlayerHand({
                   zIndex: selected ? HAND_SIZE + 1 : index,
                 },
                 canPlay && styles.playableCard,
-                selected && styles.selectedHandCard,
+                selected && styles.selectedCard,
+                dimmed && styles.unplayableCard,
               ]}
             />
           );
@@ -69,6 +76,6 @@ export default function PlayerHand({
           </Text>
         )}
       </View>
-    </View>
+    </Glass>
   );
 }

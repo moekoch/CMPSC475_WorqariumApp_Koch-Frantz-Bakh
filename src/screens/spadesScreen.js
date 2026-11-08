@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
@@ -10,7 +11,10 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { COLORS, FONTS } from '../constants/theme';
+import GameTable from '../components/GameTable';
+import PlayerHand from '../components/PlayerHand';
+import { AERO, Glass, GlossButton, InfoModal, Orb, TopPill } from '../components/SpadesUI';
+import WaterBackground from '../components/aquarium/WaterBackground';
 import {
   DIFFICULTIES,
   HAND_SIZE,
@@ -19,11 +23,9 @@ import {
   SUIT_NAMES,
   TRICKS_PER_HAND,
 } from '../constants/gameConstants';
-import GameTable from '../components/GameTable';
-import PlayerHand from '../components/PlayerHand';
-import { Glass, GlossButton, InfoModal } from '../components/SpadesUI';
-import WaterBackground from '../components/aquarium/WaterBackground';
+import { COLORS, FONTS } from '../constants/theme';
 import { chooseBotBid, chooseBotCard } from '../logic/botLogic';
+import { legalCards } from '../logic/cardUtils';
 import {
   applyBid,
   createGame,
@@ -32,11 +34,17 @@ import {
   finishTrick,
   playCard,
 } from '../logic/gameLogic';
-import { legalCards } from '../logic/cardUtils';
 import { getGameStatus } from '../logic/scoring';
 
 const TOP_INSET = Platform.OS === 'android' ? StatusBar.currentHeight || 28 : 54;
 const SIDE_W = 72;
+const LIFT = 12;
+const SELECT_RISE = 14;
+const DIFFICULTY_APPEARANCE = {
+  easy: { orb: ['#B4F5D5', '#22B07E'], wash: '#DDF7EC', rim: '#A6E3C8' },
+  medium: { orb: ['#FFE9A3', '#EDA311'], wash: '#FFF1D0', rim: '#F2D88F' },
+  hard: { orb: ['#FFC4B6', '#E2573F'], wash: '#FFE3DD', rim: '#F3B8AB' },
+};
 
 export default function SpadesScreen({ navigation }) {
   const [game, setGame] = useState(() => createGame());
@@ -47,17 +55,17 @@ export default function SpadesScreen({ navigation }) {
   const sizes = useMemo(() => {
     const availW = windowWidth - 24;
     const handCardW = Math.max(
-      36,
-      Math.min(64, Math.floor(availW * 0.165), Math.floor(windowHeight * 0.075))
+      32,
+      Math.min(52, Math.floor(availW * 0.14), Math.floor(windowHeight * 0.065))
     );
     const handCardH = Math.round(handCardW * 1.49);
     const step = Math.min(handCardW + 4, (availW - 16 - handCardW) / (HAND_SIZE - 1));
     const trickW = Math.max(
-      30,
+      24,
       Math.min(
-        54,
-        Math.floor((windowWidth - 24 - 16 - 2 * SIDE_W - 8) / 3.3),
-        Math.floor(windowHeight * 0.075)
+        48,
+        Math.floor((windowWidth - 24 - 16 - 2 * SIDE_W - 8) / 3),
+        Math.floor(windowHeight * 0.07)
       )
     );
     return {
@@ -66,8 +74,10 @@ export default function SpadesScreen({ navigation }) {
       step,
       trickW,
       trickH: Math.round(trickW * 1.49),
-      restTop: 20,
-      playableTop: 12,
+      previewW: Math.round(trickW * 1.4),
+      previewH: Math.round(trickW * 1.49 * 1.4),
+      restTop: LIFT + SELECT_RISE,
+      playableTop: SELECT_RISE,
       selectedTop: 0,
     };
   }, [windowWidth, windowHeight]);
@@ -184,14 +194,12 @@ export default function SpadesScreen({ navigation }) {
       }
       const currentCard = current.players[0].hand.find((handCard) => handCard.id === card.id);
       if (!currentCard) return current;
-      const currentPlayableCards = legalCards(
+      const currentPlayable = legalCards(
         current.players[0].hand,
         current.trick,
         current.spadesBroken
       );
-      if (!currentPlayableCards.some((playableCard) => playableCard.id === card.id)) {
-        return current;
-      }
+      if (!currentPlayable.some((playableCard) => playableCard.id === card.id)) return current;
       return playCard(current, 0, currentCard);
     });
   }, []);
@@ -223,10 +231,10 @@ export default function SpadesScreen({ navigation }) {
   }, [game.phase, game.turn, game.dealer, game.trickNumber, gameOver, youWon]);
   const hint = myTurnToPlay
     ? selectedCard
-      ? `Selected ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]} · tap Play to confirm`
+      ? 'Tap Play to confirm · tap the card again to cancel'
       : game.leadSuit
-        ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit or trump with a spade`
-        : 'You lead · tap a glowing card to preview it'
+        ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit if you can`
+        : 'You lead · tap a glowing card'
     : game.message;
   const currentPopup = game.popups[0];
   const showGameOver = gameOver && game.popups.length === 0;
@@ -238,25 +246,19 @@ export default function SpadesScreen({ navigation }) {
     >
       <View style={styles.content}>
         <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
+          <TopPill
+            label="‹  Games"
             accessibilityLabel="Back to Games"
             onPress={() => navigation?.goBack()}
-            hitSlop={8}
-            style={({ pressed }) => [styles.topPill, pressed && styles.pressed]}
-          >
-            <Text style={styles.topPillText}>‹  Games</Text>
-          </Pressable>
+            styles={styles}
+          />
           <Text style={styles.title}>Spades</Text>
-          <Pressable
-            accessibilityRole="button"
+          <TopPill
+            label="Rules  ?"
             accessibilityLabel="Rules and how to play"
             onPress={() => setRulesOpen(true)}
-            hitSlop={8}
-            style={({ pressed }) => [styles.topPill, pressed && styles.pressed]}
-          >
-            <Text style={styles.topPillText}>Rules  ?</Text>
-          </Pressable>
+            styles={styles}
+          />
         </View>
 
         <GameTable
@@ -293,28 +295,42 @@ export default function SpadesScreen({ navigation }) {
 
       <Modal visible={!game.difficulty} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.modalBackdrop}>
-          <Glass tint={COLORS.modalGlass} radius={28} style={styles.modalCard} styles={styles}>
+          <Glass tint={AERO.modal} radius={28} style={styles.modalCard} styles={styles}>
             <Text accessibilityRole="header" style={styles.modalTitle}>
               Choose difficulty
             </Text>
             <Text style={styles.modalBody}>Your partner and both opponents are bots.</Text>
-            {DIFFICULTIES.map((level) => (
-              <Pressable
-                key={level.key}
-                accessibilityRole="button"
-                accessibilityLabel={`${level.label} difficulty`}
-                onPress={() => chooseDifficulty(level.key)}
-                style={({ pressed }) => [
-                  styles.diffOption,
-                  { backgroundColor: level.bg, borderColor: level.rim },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View pointerEvents="none" style={styles.glossButtonShine} />
-                <Text style={styles.diffTitle}>{level.label}</Text>
-                <Text style={styles.diffBlurb}>{level.blurb}</Text>
-              </Pressable>
-            ))}
+            {DIFFICULTIES.map((level) => {
+              const appearance = DIFFICULTY_APPEARANCE[level.key];
+              return (
+                <Pressable
+                  key={level.key}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${level.label} difficulty`}
+                  onPress={() => chooseDifficulty(level.key)}
+                  style={({ pressed }) => [
+                    styles.diffOption,
+                    { backgroundColor: appearance.wash, borderColor: appearance.rim },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['#FFFFFF', appearance.wash]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={styles.diffRow}>
+                    <Orb colors={appearance.orb} styles={styles} />
+                    <View style={styles.diffText}>
+                      <Text style={styles.diffTitle}>{level.label}</Text>
+                      <Text style={styles.diffBlurb}>{level.blurb}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
           </Glass>
         </View>
       </Modal>
@@ -327,7 +343,7 @@ export default function SpadesScreen({ navigation }) {
       >
         <View style={styles.modalBackdrop}>
           <Glass
-            tint={COLORS.modalGlass}
+            tint={AERO.modal}
             radius={28}
             style={[styles.modalCard, styles.rulesCard]}
             styles={styles}
@@ -336,8 +352,11 @@ export default function SpadesScreen({ navigation }) {
               Rules &amp; how to play
             </Text>
             <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator>
-              {RULES_SECTIONS.map((section) => (
-                <View key={section.title} style={styles.ruleBlock}>
+              {RULES_SECTIONS.map((section, index) => (
+                <View
+                  key={section.title}
+                  style={[styles.ruleBlock, index === RULES_SECTIONS.length - 1 && styles.ruleBlockLast]}
+                >
                   <Text style={styles.ruleHeading}>{section.title}</Text>
                   <Text style={styles.ruleBody}>{section.body}</Text>
                 </View>
@@ -387,9 +406,15 @@ export default function SpadesScreen({ navigation }) {
 /* ------------------------------------------------------------------ */
 
 const textGlow = {
-  textShadowColor: COLORS.textGlow,
+  textShadowColor: AERO.shadow,
   textShadowOffset: { width: 0, height: 1 },
   textShadowRadius: 3,
+};
+
+const titleGlow = {
+  textShadowColor: 'rgba(0,36,70,0.7)',
+  textShadowOffset: { width: 0, height: 2 },
+  textShadowRadius: 8,
 };
 
 const styles = StyleSheet.create({
@@ -397,93 +422,133 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     gap: 10,
-    paddingBottom: 24,
+    paddingBottom: 18,
     paddingHorizontal: 12,
     paddingTop: TOP_INSET + 8,
   },
 
   /* glass + gloss */
   glass: {
-    borderColor: COLORS.glassRim,
-    borderWidth: 1.5,
+    borderColor: AERO.rim,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   gloss: {
-    backgroundColor: COLORS.glassLight,
-    height: '46%',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
+    ...StyleSheet.absoluteFillObject,
+  },
+  buttonGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
   glossButton: {
     alignItems: 'center',
-    borderRadius: 22,
+    borderRadius: 999,
     borderWidth: 1.5,
     justifyContent: 'center',
-    minHeight: 42,
+    minHeight: 44,
     overflow: 'hidden',
-    paddingHorizontal: 22,
+    paddingHorizontal: 26,
   },
-  glossButtonSmall: { borderRadius: 16, minHeight: 32, paddingHorizontal: 12 },
+  glossButtonSmall: { minHeight: 34, paddingHorizontal: 14 },
   glossButtonShine: {
-    backgroundColor: COLORS.glassShine,
-    height: '50%',
-    left: 0,
+    borderRadius: 999,
+    height: '46%',
+    left: 10,
     position: 'absolute',
-    right: 0,
-    top: 0,
+    right: 10,
+    top: 2,
   },
-  glossButtonText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 16, ...textGlow },
+  glossButtonText: { fontFamily: FONTS.bodyBold, fontSize: 16, letterSpacing: 0.3 },
   glossButtonTextSmall: { fontSize: 13 },
-  disabledButton: { opacity: 0.45 },
+  disabledButton: { opacity: 0.4 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  orb: {
+    alignItems: 'center',
+    borderColor: 'rgba(255,255,255,0.85)',
+    borderWidth: 1.5,
+    justifyContent: 'center',
+  },
 
   /* top bar */
   topBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   topPill: {
     alignItems: 'center',
-    backgroundColor: COLORS.glassControl,
-    borderColor: COLORS.glassRim,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    backgroundColor: 'rgba(6,66,112,0.5)',
+    borderColor: AERO.rim,
+    borderRadius: 999,
+    borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 36,
-    minWidth: 88,
-    paddingHorizontal: 12,
+    minHeight: 38,
+    overflow: 'hidden',
+    width: 96,
   },
-  topPillText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 14, ...textGlow },
-  title: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 28, ...textGlow },
+  topPillText: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 14, ...textGlow },
+  title: { color: '#FFFFFF', fontFamily: FONTS.heading, fontSize: 30, ...titleGlow },
 
   /* score strip */
-  scoreCard: { alignItems: 'center', flexDirection: 'row', paddingVertical: 4 },
-  scoreTeam: { alignItems: 'center', flex: 1 },
-  scoreMiddle: { alignItems: 'center', width: 110 },
-  scoreLabel: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 12, ...textGlow },
-  score: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 24, lineHeight: 28, ...textGlow },
-  scoreDetail: { color: COLORS.glassText, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
-  overtime: { color: COLORS.sunYellow, fontFamily: FONTS.bodyBold, fontSize: 11, ...textGlow },
+  scoreCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+  },
+  scoreTeam: { alignItems: 'center', flex: 1, gap: 2 },
+  scoreMiddle: { alignItems: 'center', gap: 6, width: 96 },
+  scoreDivider: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    marginVertical: 4,
+    width: 1,
+  },
+  scoreLabel: {
+    color: AERO.textMuted,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    ...textGlow,
+  },
+  score: { color: '#FFFFFF', fontFamily: FONTS.heading, fontSize: 34, lineHeight: 38, ...textGlow },
+  handLabel: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 13, ...textGlow },
+  chip: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  chipText: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 11 },
+  overtime: {
+    color: AERO.gold,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    ...textGlow,
+  },
 
   /* table */
   table: {
     flex: 1,
     paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   statusPill: {
     alignItems: 'center',
     alignSelf: 'center',
     maxWidth: '100%',
-    paddingHorizontal: 16,
-    paddingVertical: 5,
+    paddingHorizontal: 20,
+    paddingVertical: 6,
   },
-  statusTitle: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 16, ...textGlow },
-  statusHint: { color: COLORS.glassTextMuted, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
+  statusTitle: { color: '#FFFFFF', fontFamily: FONTS.heading, fontSize: 17, ...textGlow },
+  statusHint: { color: AERO.textMuted, fontFamily: FONTS.body, fontSize: 12, ...textGlow },
   northWrap: { alignSelf: 'center', marginTop: 8 },
   southWrap: { alignSelf: 'center', marginTop: 2 },
   middleRow: { alignItems: 'stretch', flex: 1, flexDirection: 'row', marginVertical: 8 },
   sideWrap: { justifyContent: 'center', width: SIDE_W },
-  trickArea: { alignItems: 'center', flex: 1, justifyContent: 'center', marginHorizontal: 4 },
+  trickArea: {
+    alignItems: 'center',
+    borderColor: AERO.rimSoft,
+    flex: 1,
+    justifyContent: 'center',
+    marginHorizontal: 6,
+  },
   trickImage: {
     position: 'absolute',
     shadowColor: COLORS.cardShadow,
@@ -491,95 +556,106 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 3,
   },
-  centerText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 13, textAlign: 'center', ...textGlow },
-  previewOverlay: {
-    alignItems: 'center',
+  trickDim: {
+    backgroundColor: 'rgba(2,28,54,0.62)',
     bottom: 0,
-    gap: 8,
-    justifyContent: 'center',
     left: 0,
     position: 'absolute',
     right: 0,
     top: 0,
-    zIndex: 10,
   },
-  previewDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(2, 28, 54, 0.62)',
+  halo: { borderRadius: 12, position: 'absolute' },
+  previewWrap: {
+    alignItems: 'center',
+    bottom: 0,
+    left: 0,
+    paddingBottom: 2,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
-  previewCard: {
-    backgroundColor: COLORS.pearl,
-    borderRadius: 8,
-    elevation: 8,
+  previewCardSlot: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 28,
+  },
+  previewActions: { alignItems: 'center', gap: 8 },
+  previewImage: {
     shadowColor: COLORS.cardShadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
   },
-  previewActions: { alignItems: 'center', flexDirection: 'row', gap: 14 },
-  previewCancel: {
-    color: COLORS.glassTextMuted,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 13,
-    ...textGlow,
-  },
+  previewCancel: { color: AERO.textMuted, fontFamily: FONTS.bodyBold, fontSize: 13, ...textGlow },
+  centerText: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 14, textAlign: 'center', ...textGlow },
 
   /* bidding */
-  bidPanel: { alignItems: 'center', gap: 8 },
-  bidLabel: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 13, ...textGlow },
-  bidRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  bidPanel: { alignItems: 'center', gap: 12 },
+  bidLabel: {
+    color: AERO.textMuted,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12,
+    letterSpacing: 1.2,
+    ...textGlow,
+  },
+  stepper: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(3,48,88,0.32)',
+    borderColor: AERO.rimSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 5,
+  },
   bidAdjust: { borderRadius: 20, height: 40, minHeight: 40, paddingHorizontal: 0, width: 40 },
+  bidAdjustText: { fontSize: 24, lineHeight: 28 },
   bidNumber: {
-    color: COLORS.pearl,
+    color: '#FFFFFF',
     fontFamily: FONTS.heading,
-    fontSize: 26,
-    minWidth: 54,
+    fontSize: 30,
+    minWidth: 52,
     textAlign: 'center',
     ...textGlow,
   },
-  bidConfirm: { minWidth: 96 },
+  bidConfirm: { minWidth: 120 },
 
   /* badges */
   badge: {
     alignItems: 'center',
-    backgroundColor: COLORS.glassSubtle,
-    borderColor: 'transparent',
+    backgroundColor: 'rgba(3,48,88,0.34)',
+    borderColor: 'rgba(255,255,255,0.2)',
     borderRadius: 18,
-    borderWidth: 1.5,
+    borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
-  badgeH: { flexDirection: 'row', gap: 6 },
-  badgeV: { paddingVertical: 6, width: '100%' },
+  badgeH: { flexDirection: 'row', gap: 8, paddingHorizontal: 12 },
+  badgeV: { gap: 2, paddingVertical: 8, width: '100%' },
   badgeActive: {
-    backgroundColor: COLORS.activeGlowFill,
-    borderColor: COLORS.limeGlow,
-    shadowColor: COLORS.limeGlow,
+    backgroundColor: 'rgba(120,240,190,0.2)',
+    borderColor: AERO.mint,
+    shadowColor: AERO.mint,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
+    shadowOpacity: 0.7,
     shadowRadius: 8,
   },
   fishFrame: { alignItems: 'center', height: 30, justifyContent: 'center', width: 44 },
   fish: { position: 'relative' },
   badgeTextH: { alignItems: 'flex-start' },
-  badgeTextV: { alignItems: 'center' },
-  playerName: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 11, ...textGlow },
-  playerStats: { color: COLORS.glassTextMuted, fontFamily: FONTS.body, fontSize: 10, ...textGlow },
+  badgeTextV: { alignItems: 'center', alignSelf: 'stretch' },
+  playerName: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 12, ...textGlow },
+  playerStats: { color: AERO.textMuted, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
   dealerChip: {
-    alignItems: 'center',
-    backgroundColor: COLORS.coral,
-    borderColor: COLORS.glassRim,
-    borderRadius: 10,
-    borderWidth: 1,
-    height: 20,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: -4,
-    top: -6,
-    width: 20,
+    backgroundColor: AERO.gold,
+    borderRadius: 999,
+    marginTop: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
   },
-  dealerChipText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 11 },
+  dealerChipText: { color: AERO.goldInk, fontFamily: FONTS.bodyBold, fontSize: 10, letterSpacing: 0.3 },
 
   /* result overlay */
   resultOverlay: {
@@ -593,15 +669,15 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
   },
-  resultCard: { alignItems: 'center', gap: 3, maxWidth: 360, paddingHorizontal: 20, paddingVertical: 16, width: '100%' },
-  handOutcome: { fontFamily: FONTS.heading, fontSize: 22, marginBottom: 4, textAlign: 'center', ...textGlow },
-  handWon: { color: COLORS.sunYellow },
-  handMissed: { color: COLORS.pearl },
-  resultText: { color: COLORS.pearl, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center', ...textGlow },
-  resultButton: { marginTop: 10 },
+  resultCard: { alignItems: 'center', gap: 4, maxWidth: 360, paddingHorizontal: 20, paddingVertical: 18, width: '100%' },
+  handOutcome: { fontFamily: FONTS.heading, fontSize: 24, marginBottom: 4, textAlign: 'center', ...textGlow },
+  handWon: { color: AERO.gold },
+  handMissed: { color: '#FFFFFF' },
+  resultText: { color: '#FFFFFF', fontFamily: FONTS.body, fontSize: 14, textAlign: 'center', ...textGlow },
+  resultButton: { marginTop: 12 },
 
   /* hand */
-  handShelf: { alignItems: 'center', paddingBottom: 10, paddingHorizontal: 8, paddingTop: 8 },
+  handShelf: { alignItems: 'center', paddingBottom: 8, paddingHorizontal: 8, paddingTop: 8 },
   handCard: {
     backgroundColor: COLORS.pearl,
     borderColor: COLORS.cardRim,
@@ -616,44 +692,41 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   playableCard: {
-    borderColor: COLORS.limeGlow,
+    borderColor: AERO.mint,
     borderWidth: 2,
-    shadowColor: COLORS.limeGlow,
+    shadowColor: AERO.mint,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.95,
-    shadowRadius: 7,
+    shadowOpacity: 0.85,
+    shadowRadius: 6,
   },
-  selectedHandCard: {
-    borderColor: COLORS.sunYellow,
-    borderWidth: 3,
-    elevation: 12,
-    shadowColor: COLORS.sunYellow,
-    shadowOffset: { width: 0, height: 0 },
+  selectedCard: {
+    elevation: 10,
     shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowRadius: 9,
+    transform: [{ scale: 1.08 }],
+    zIndex: 10,
   },
-  // A tint instead of opacity, so overlapped cards stay solid instead of showing through.
-  dimOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 40, 70, 0.4)' },
+  unplayableCard: { opacity: 0.5 },
   handImage: { height: '100%', width: '100%' },
-  emptyHand: { color: COLORS.pearl, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center', ...textGlow },
+  emptyHand: { color: '#FFFFFF', fontFamily: FONTS.body, fontSize: 14, textAlign: 'center', ...textGlow },
 
   /* difficulty picker */
   diffOption: {
     alignSelf: 'stretch',
     borderRadius: 20,
-    borderWidth: 1.5,
-    gap: 2,
+    borderWidth: 1,
     overflow: 'hidden',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  diffTitle: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 20, ...textGlow },
+  diffRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  diffText: { flex: 1, gap: 2 },
+  diffTitle: { color: AERO.ink, fontFamily: FONTS.heading, fontSize: 19 },
   diffBlurb: {
-    color: COLORS.glassTextStrong,
+    color: AERO.inkSoft,
     fontFamily: FONTS.body,
     fontSize: 13,
     lineHeight: 18,
-    ...textGlow,
   },
 
   /* modals */
@@ -667,7 +740,7 @@ const styles = StyleSheet.create({
   modalCard: {
     alignItems: 'center',
     borderColor: COLORS.aquaRim,
-    gap: 8,
+    gap: 10,
     maxWidth: 420,
     padding: 22,
     width: '100%',
@@ -675,10 +748,16 @@ const styles = StyleSheet.create({
   rulesCard: { alignItems: 'stretch', maxHeight: '85%' },
   rulesScroll: { flexGrow: 0, flexShrink: 1, marginVertical: 6 },
   modalTitle: { color: COLORS.aeroInk, fontFamily: FONTS.heading, fontSize: 26, textAlign: 'center' },
-  modalWinner: { color: COLORS.aeroInk, fontFamily: FONTS.heading, fontSize: 22, textAlign: 'center' },
-  modalBody: { color: COLORS.aeroInkSoft, fontFamily: FONTS.body, fontSize: 15, textAlign: 'center' },
+  modalWinner: { color: AERO.ink, fontFamily: FONTS.heading, fontSize: 22, textAlign: 'center' },
+  modalBody: { color: AERO.inkSoft, fontFamily: FONTS.body, fontSize: 15, lineHeight: 21, textAlign: 'center' },
   modalButton: { alignSelf: 'center', marginTop: 8 },
-  ruleBlock: { marginBottom: 12 },
-  ruleHeading: { color: COLORS.aeroInk, fontFamily: FONTS.bodyBold, fontSize: 15 },
-  ruleBody: { color: COLORS.aeroInkSoft, fontFamily: FONTS.body, fontSize: 14, lineHeight: 20 },
+  ruleBlock: {
+    borderBottomColor: 'rgba(11,74,116,0.12)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 12,
+    paddingBottom: 12,
+  },
+  ruleBlockLast: { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
+  ruleHeading: { color: AERO.ink, fontFamily: FONTS.bodyBold, fontSize: 15, marginBottom: 2 },
+  ruleBody: { color: AERO.inkSoft, fontFamily: FONTS.body, fontSize: 14, lineHeight: 21 },
 });
