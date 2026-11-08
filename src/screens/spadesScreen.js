@@ -176,32 +176,32 @@ export default function SpadesScreen({ navigation }) {
     (card) => card.id === selectedCardId && playableIds.has(card.id)
   );
 
+  const onPlayCard = useCallback((card) => {
+    setSelectedCardId(null);
+    setGame((current) => {
+      if (current.phase !== 'playing' || current.turn !== 0 || current.trick.length >= 4) {
+        return current;
+      }
+      const currentCard = current.players[0].hand.find((handCard) => handCard.id === card.id);
+      if (!currentCard) return current;
+      const currentPlayableCards = legalCards(
+        current.players[0].hand,
+        current.trick,
+        current.spadesBroken
+      );
+      if (!currentPlayableCards.some((playableCard) => playableCard.id === card.id)) {
+        return current;
+      }
+      return playCard(current, 0, currentCard);
+    });
+  }, []);
+
   const onHandCardPress = useCallback(
     (card) => {
       if (!playableIds.has(card.id)) return;
-      if (selectedCardId === card.id) {
-        setSelectedCardId(null);
-        setGame((current) => {
-          if (current.phase !== 'playing' || current.turn !== 0 || current.trick.length >= 4) {
-            return current;
-          }
-          const currentCard = current.players[0].hand.find((handCard) => handCard.id === card.id);
-          if (!currentCard) return current;
-          const currentPlayableCards = legalCards(
-            current.players[0].hand,
-            current.trick,
-            current.spadesBroken
-          );
-          if (!currentPlayableCards.some((playableCard) => playableCard.id === card.id)) {
-            return current;
-          }
-          return playCard(current, 0, currentCard);
-        });
-      } else {
-        setSelectedCardId(card.id);
-      }
+      setSelectedCardId((current) => (current === card.id ? null : card.id));
     },
-    [playableIds, selectedCardId]
+    [playableIds]
   );
 
   const yourScore = game.scores[0];
@@ -223,10 +223,10 @@ export default function SpadesScreen({ navigation }) {
   }, [game.phase, game.turn, game.dealer, game.trickNumber, gameOver, youWon]);
   const hint = myTurnToPlay
     ? selectedCard
-      ? `Selected ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]} · tap again to play`
+      ? `Selected ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]} · tap Play to confirm`
       : game.leadSuit
         ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit or trump with a spade`
-        : 'You lead · tap a glowing card to select it'
+        : 'You lead · tap a glowing card to preview it'
     : game.message;
   const currentPopup = game.popups[0];
   const showGameOver = gameOver && game.popups.length === 0;
@@ -266,11 +266,14 @@ export default function SpadesScreen({ navigation }) {
           turnLabel={turnLabel}
           hint={hint}
           sizes={sizes}
+          selectedCard={selectedCard}
           gameOver={gameOver}
           youWon={youWon}
           onDeal={onDeal}
           adjustBid={adjustBid}
           submitBid={submitBid}
+          onPlayCard={onPlayCard}
+          onCancelCard={() => setSelectedCardId(null)}
           newGame={newGame}
           nextHand={nextHand}
           styles={styles}
@@ -489,6 +492,37 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   centerText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 13, textAlign: 'center', ...textGlow },
+  previewOverlay: {
+    alignItems: 'center',
+    bottom: 0,
+    gap: 8,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 10,
+  },
+  previewDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(2, 28, 54, 0.62)',
+  },
+  previewCard: {
+    backgroundColor: COLORS.pearl,
+    borderRadius: 8,
+    elevation: 8,
+    shadowColor: COLORS.cardShadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+  },
+  previewActions: { alignItems: 'center', flexDirection: 'row', gap: 14 },
+  previewCancel: {
+    color: COLORS.glassTextMuted,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 13,
+    ...textGlow,
+  },
 
   /* bidding */
   bidPanel: { alignItems: 'center', gap: 8 },

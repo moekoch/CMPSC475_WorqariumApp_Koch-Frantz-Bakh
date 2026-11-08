@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FadeInUp } from 'react-native-reanimated';
-import { DIFFICULTY_LABELS } from '../constants/gameConstants';
+import { DIFFICULTY_LABELS, SUIT_NAMES } from '../constants/gameConstants';
 import { COLORS } from '../constants/theme';
 import { formatBid } from '../logic/cardUtils';
 import Card from './Card';
@@ -28,11 +28,14 @@ export default function GameTable({
   turnLabel,
   hint,
   sizes,
+  selectedCard,
   gameOver,
   youWon,
   onDeal,
   adjustBid,
   submitBid,
+  onPlayCard,
+  onCancelCard,
   newGame,
   nextHand,
   styles,
@@ -148,10 +151,41 @@ export default function GameTable({
                 <Text style={styles.centerText}>Bidding…</Text>
               ))}
 
-            {game.phase === 'playing' && game.trick.length === 0 && (
+            {game.phase === 'playing' && game.trick.length === 0 && !selectedCard && (
               <Text style={styles.centerText}>
                 {game.turn === 0 ? 'Play a card' : 'Waiting for a card'}
               </Text>
+            )}
+
+            {selectedCard && (
+              <View style={styles.previewOverlay}>
+                <View pointerEvents="none" style={styles.previewDim} />
+                <Card
+                  card={selectedCard}
+                  imageStyle={StyleSheet.absoluteFill}
+                  style={[
+                    styles.previewCard,
+                    { width: sizes.trickW * 1.5, height: sizes.trickH * 1.5 },
+                  ]}
+                />
+                <View style={styles.previewActions}>
+                  <GlossButton
+                    label="Play"
+                    small
+                    accessibilityLabel={`Play ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]}`}
+                    onPress={() => onPlayCard(selectedCard)}
+                    styles={styles}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel card selection"
+                    onPress={onCancelCard}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.previewCancel}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </View>
             )}
           </Glass>
 
