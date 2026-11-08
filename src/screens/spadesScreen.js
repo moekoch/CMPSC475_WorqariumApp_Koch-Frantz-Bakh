@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
@@ -92,22 +93,25 @@ const DIFFICULTIES = [
   {
     key: 'easy',
     label: 'Easy',
-    bg: COLORS.limeDark,
-    rim: COLORS.limeGlow,
+    orb: ['#B4F5D5', '#22B07E'],
+    wash: '#DDF7EC',
+    rim: '#A6E3C8',
     blurb: 'Relaxed bots. They bid roughly and play most cards at random.',
   },
   {
     key: 'medium',
     label: 'Medium',
-    bg: COLORS.difficultyMedium,
-    rim: COLORS.difficultyMediumRim,
+    orb: ['#FFE9A3', '#EDA311'],
+    wash: '#FFF1D0',
+    rim: '#F2D88F',
     blurb: 'Solid bots. They bid carefully, win tricks cheaply, and never overtake their partner.',
   },
   {
     key: 'hard',
     label: 'Hard',
-    bg: COLORS.difficultyHard,
-    rim: COLORS.difficultyHardRim,
+    orb: ['#FFC4B6', '#E2573F'],
+    wash: '#FFE3DD',
+    rim: '#F3B8AB',
     blurb: 'Sharp bots. They count cards, track voids, defend nil bids, and manage bags.',
   },
 ];
@@ -737,11 +741,46 @@ function finishTrick(game) {
 const SIDE_W = 72; // width of the West / East badges
 const TOP_INSET = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 54;
 const LIFT = 12; // how far playable cards rise above the rest of the hand
+const PREVIEW_HALO = [[7, 0.1], [4, 0.18], [2, 0.3]]; // [spread px, opacity] tight white rim glow
+const SELECT_RISE = 14; // extra rise for the card you've tapped (waiting for confirm)
 
-function Glass({ children, style, tint = COLORS.glassLight, radius = 20, gloss = true }) {
+// Local design tokens for this screen. The rule of thumb: white text only ever
+// sits on DEEP glass (panel), and anything on LIGHT glass (modal) uses dark ink.
+const AERO = {
+  panel: 'rgba(6,66,112,0.56)', // deep glass: white text stays readable on any water
+  panelSoft: 'rgba(255,255,255,0.16)',
+  well: 'rgba(3,48,88,0.22)', // recessed area (the trick pool)
+  modal: 'rgba(244,251,255,0.97)',
+  rim: 'rgba(255,255,255,0.5)',
+  rimSoft: 'rgba(255,255,255,0.26)',
+  textMuted: 'rgba(255,255,255,0.86)',
+  ink: '#0B4A74',
+  inkSoft: '#2E6283',
+  shadow: 'rgba(0,36,70,0.55)',
+  mint: '#A8F7CF',
+  gold: '#FFCC4D',
+  goldInk: '#4A3300',
+};
+
+// Soft, glossy buttons with dark text (no flat neon fills).
+const BUTTON_VARIANTS = {
+  green: { colors: ['#D5FAE8', '#74DDB2'], rim: 'rgba(255,255,255,0.9)', text: '#0A5A45' },
+  aqua: { colors: ['#E6F9FF', '#8FD9F3'], rim: 'rgba(255,255,255,0.9)', text: AERO.ink },
+};
+
+function Glass({ children, style, tint = AERO.panel, radius = 24, gloss = true }) {
   return (
     <View style={[styles.glass, { backgroundColor: tint, borderRadius: radius }, style]}>
-      {gloss && <View pointerEvents="none" style={styles.gloss} />}
+      {gloss && (
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']}
+          locations={[0, 0.4, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       {children}
     </View>
   );
@@ -755,11 +794,9 @@ function GlossButton({
   disabled = false,
   accessibilityLabel,
   style,
+  textStyle,
 }) {
-  const colors =
-    variant === 'green'
-      ? { bg: COLORS.limeDark, rim: COLORS.limeGlow }
-      : { bg: COLORS.aquaDark, rim: COLORS.aquaRim };
+  const v = BUTTON_VARIANTS[variant] || BUTTON_VARIANTS.green;
   return (
     <Pressable
       accessibilityRole="button"
@@ -770,19 +807,76 @@ function GlossButton({
       style={({ pressed }) => [
         styles.glossButton,
         small && styles.glossButtonSmall,
-        { backgroundColor: colors.bg, borderColor: colors.rim },
+        { backgroundColor: v.colors[1], borderColor: v.rim },
         disabled && styles.disabledButton,
         pressed && styles.pressed,
         style,
       ]}
     >
-      <View pointerEvents="none" style={styles.glossButtonShine} />
-      <Text style={[styles.glossButtonText, small && styles.glossButtonTextSmall]}>{label}</Text>
+      <LinearGradient pointerEvents="none" colors={v.colors} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.7)', 'rgba(255,255,255,0.05)']}
+        style={styles.glossButtonShine}
+      />
+      <Text
+        style={[
+          styles.glossButtonText,
+          small && styles.glossButtonTextSmall,
+          { color: v.text },
+          textStyle,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
+function TopPill({ label, onPress, accessibilityLabel }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.topPill, pressed && styles.pressed]}
+    >
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+        style={StyleSheet.absoluteFill}
+      />
+      <Text style={styles.topPillText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** Glossy little sphere used as the difficulty marker. */
+function Orb({ colors, size = 36 }) {
+  return (
+    <LinearGradient
+      colors={colors}
+      style={[styles.orb, { width: size, height: size, borderRadius: size / 2 }]}
+    >
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.85)', 'rgba(255,255,255,0)']}
+        style={{
+          borderRadius: size,
+          height: size * 0.42,
+          left: size * 0.16,
+          position: 'absolute',
+          right: size * 0.16,
+          top: 3,
+        }}
+      />
+    </LinearGradient>
+  );
+}
+
 function PlayerBadge({ player, playerIndex, isTurn, isDealer, horizontal }) {
+  const bid = formatBid(player.bid);
   return (
     <View
       style={[
@@ -800,12 +894,28 @@ function PlayerBadge({ player, playerIndex, isTurn, isDealer, horizontal }) {
         />
       </View>
       <View style={horizontal ? styles.badgeTextH : styles.badgeTextV}>
-        <Text style={styles.playerName} numberOfLines={1}>
+        <Text
+          style={styles.playerName}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+        >
           {SEATS[playerIndex]} · {SEAT_TAGS[playerIndex]}
         </Text>
-        <Text style={styles.playerStats} numberOfLines={1}>
-          Bid {formatBid(player.bid)} · {player.tricks} won
-        </Text>
+        {horizontal ? (
+          <Text style={styles.playerStats} numberOfLines={1}>
+            Bid {bid} · {player.tricks} won
+          </Text>
+        ) : (
+          <>
+            <Text style={styles.playerStats} numberOfLines={1}>
+              Bid {bid}
+            </Text>
+            <Text style={styles.playerStats} numberOfLines={1}>
+              {player.tricks} won
+            </Text>
+          </>
+        )}
         {isDealer && (
           <View style={styles.dealerChip}>
             <Text style={styles.dealerChipText}>Dealer</Text>
@@ -834,7 +944,7 @@ function InfoModal({ visible, title, children, buttonLabel, onPress }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onPress}>
       <View style={styles.modalBackdrop}>
-        <Glass tint={COLORS.modalGlass} radius={28} style={styles.modalCard}>
+        <Glass tint={AERO.modal} radius={28} style={styles.modalCard}>
           <Text accessibilityRole="header" style={styles.modalTitle}>
             {title}
           </Text>
@@ -853,6 +963,7 @@ function InfoModal({ visible, title, children, buttonLabel, onPress }) {
 export default function SpadesScreen({ navigation }) {
   const [game, setGame] = useState(() => createGame());
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null); // tapped card awaiting confirmation
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   /* ----- responsive sizing: everything must fit one screen, no scrolling ----- */
@@ -946,10 +1057,17 @@ export default function SpadesScreen({ navigation }) {
   }, []);
 
   const onPlayCard = useCallback((card) => {
+    setSelectedId(null);
     setGame((current) => {
       if (current.phase !== 'playing' || current.turn !== 0) return current;
       return playCard(current, 0, card);
     });
+  }, []);
+
+  // Tapping a card only selects it (preview). Tapping it again cancels.
+  // The play itself happens from the Play button, so a stray tap can't burn a card.
+  const onTapCard = useCallback((card) => {
+    setSelectedId((current) => (current === card.id ? null : card.id));
   }, []);
 
   // Dealer rotates clockwise after every hand, regardless of who won tricks.
@@ -987,6 +1105,12 @@ export default function SpadesScreen({ navigation }) {
 
   const playableIds = useMemo(() => new Set(playable.map((c) => c.id)), [playable]);
 
+  // Only valid while it's your turn and the card is still legal to play.
+  const selectedCard = useMemo(
+    () => (myTurnToPlay ? playable.find((c) => c.id === selectedId) ?? null : null),
+    [myTurnToPlay, playable, selectedId]
+  );
+
   const yourScore = game.scores[0];
   const botScore = game.scores[1];
   const status = getGameStatus(game.scores);
@@ -1008,11 +1132,16 @@ export default function SpadesScreen({ navigation }) {
     return `${PLAYER_NAMES[game.turn]} is playing`;
   }, [game.phase, game.turn, game.dealer, game.trickNumber, gameOver, youWon]);
 
-  const hint = myTurnToPlay
+  const hint = selectedCard
+    ? 'Tap Play to confirm · tap the card again to cancel'
+    : myTurnToPlay
     ? game.leadSuit
       ? `Lead: ${SUIT_NAMES[game.leadSuit]} · follow suit if you can`
       : 'You lead · tap a glowing card'
     : game.message;
+
+  const previewW = sizes.trickW * 1.5;
+  const previewH = sizes.trickH * 1.5;
 
   const currentPopup = game.popups[0];
   const showGameOver = gameOver && game.popups.length === 0;
@@ -1040,51 +1169,51 @@ export default function SpadesScreen({ navigation }) {
       <View style={styles.content}>
         {/* top bar */}
         <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
+          <TopPill
+            label="‹  Games"
             accessibilityLabel="Back to Games"
             onPress={() => navigation?.goBack()}
-            hitSlop={8}
-            style={({ pressed }) => [styles.topPill, pressed && styles.pressed]}
-          >
-            <Text style={styles.topPillText}>‹  Games</Text>
-          </Pressable>
+          />
           <Text style={styles.title}>Spades</Text>
-          <Pressable
-            accessibilityRole="button"
+          <TopPill
+            label="Rules  ?"
             accessibilityLabel="Rules and how to play"
             onPress={() => setRulesOpen(true)}
-            hitSlop={8}
-            style={({ pressed }) => [styles.topPill, pressed && styles.pressed]}
-          >
-            <Text style={styles.topPillText}>Rules  ?</Text>
-          </Pressable>
+          />
         </View>
 
         {/* score strip */}
-        <Glass tint={COLORS.glassStrong} radius={20} style={styles.scoreCard}>
+        <Glass tint={AERO.panel} radius={24} style={styles.scoreCard}>
           <View style={styles.scoreTeam}>
             <Text style={styles.scoreLabel}>Your team</Text>
             <Text style={styles.score}>{yourScore}</Text>
-            <Text style={styles.scoreDetail}>{game.bags[0]} bags</Text>
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{game.bags[0]} bags</Text>
+            </View>
           </View>
+          <View style={styles.scoreDivider} />
           <View style={styles.scoreMiddle}>
-            <Text style={styles.scoreDetail}>Hand {game.roundNumber}</Text>
+            <Text style={styles.handLabel}>Hand {game.roundNumber}</Text>
             {game.difficulty && (
-              <Text style={styles.scoreDetail}>{DIFFICULTY_LABELS[game.difficulty]}</Text>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>{DIFFICULTY_LABELS[game.difficulty]}</Text>
+              </View>
             )}
             {game.overtime && !gameOver && <Text style={styles.overtime}>OVERTIME</Text>}
           </View>
+          <View style={styles.scoreDivider} />
           <View style={styles.scoreTeam}>
             <Text style={styles.scoreLabel}>Them</Text>
             <Text style={styles.score}>{botScore}</Text>
-            <Text style={styles.scoreDetail}>{game.bags[1]} bags</Text>
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{game.bags[1]} bags</Text>
+            </View>
           </View>
         </Glass>
 
         {/* table */}
-        <Glass tint={COLORS.glassDeep} radius={28} style={styles.table}>
-          <Glass tint={COLORS.glassStrong} radius={16} style={styles.statusPill}>
+        <Glass tint={AERO.panel} radius={24} style={styles.table}>
+          <Glass tint={AERO.panelSoft} radius={999} style={styles.statusPill}>
             <Text style={styles.statusTitle} numberOfLines={1}>
               {turnLabel}
             </Text>
@@ -1098,7 +1227,7 @@ export default function SpadesScreen({ navigation }) {
           <View style={styles.middleRow}>
             <View style={styles.sideWrap}>{renderBadge(1)}</View>
 
-            <Glass tint={COLORS.glassSubtle} radius={22} style={styles.trickArea}>
+            <Glass tint={AERO.well} radius={20} gloss={false} style={styles.trickArea}>
               {game.trick.map(({ playerIndex, card }) => (
                 <Image
                   key={`${playerIndex}-${card.id}`}
@@ -1122,10 +1251,11 @@ export default function SpadesScreen({ navigation }) {
               {game.phase === 'bidding' &&
                 (game.turn === 0 ? (
                   <View style={styles.bidPanel}>
-                    <Text style={styles.bidLabel}>Your bid</Text>
-                    <View style={styles.bidRow}>
+                    <Text style={styles.bidLabel}>YOUR BID</Text>
+                    <View style={styles.stepper}>
                       <GlossButton
-                        label="-"
+                        label="−"
+                        textStyle={styles.bidAdjustText}
                         variant="aqua"
                         accessibilityLabel="Lower bid"
                         disabled={game.bidSelection === 0}
@@ -1135,6 +1265,7 @@ export default function SpadesScreen({ navigation }) {
                       <Text style={styles.bidNumber}>{formatBid(game.bidSelection)}</Text>
                       <GlossButton
                         label="+"
+                        textStyle={styles.bidAdjustText}
                         variant="aqua"
                         accessibilityLabel="Raise bid"
                         disabled={game.bidSelection === 13}
@@ -1153,10 +1284,60 @@ export default function SpadesScreen({ navigation }) {
                   <Text style={styles.centerText}>Bidding…</Text>
                 ))}
 
-              {game.phase === 'playing' && game.trick.length === 0 && (
+              {game.phase === 'playing' && game.trick.length === 0 && !selectedCard && (
                 <Text style={styles.centerText}>
                   {game.turn === 0 ? 'Play a card' : 'Waiting for a card'}
                 </Text>
+              )}
+
+              {/* dim everything already on the table so the previewed card stands out */}
+              {selectedCard && <View pointerEvents="none" style={styles.trickDim} />}
+
+              {selectedCard && (
+                <View style={styles.previewWrap}>
+                  <View style={styles.previewCardSlot}>
+                  <View style={{ width: previewW, height: previewH }}>
+                    {/* soft halo: stacked translucent rings fake a glow on iOS and Android */}
+                    {PREVIEW_HALO.map(([spread, alpha]) => (
+                      <View
+                        key={spread}
+                        pointerEvents="none"
+                        style={[
+                          styles.halo,
+                          {
+                            backgroundColor: `rgba(255,255,255,${alpha})`,
+                            bottom: -spread,
+                            left: -spread,
+                            right: -spread,
+                            top: -spread,
+                          },
+                        ]}
+                      />
+                    ))}
+                    <Image
+                      source={CARD_IMAGES[selectedCard.id]}
+                      resizeMode="contain"
+                      style={[styles.previewImage, { width: previewW, height: previewH }]}
+                    />
+                  </View>
+                  </View>
+                  <View style={styles.previewActions}>
+                  <GlossButton
+                    label="Play"
+                    small
+                    accessibilityLabel={`Play ${selectedCard.rank} of ${SUIT_NAMES[selectedCard.suit]}`}
+                    onPress={() => onPlayCard(selectedCard)}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel card selection"
+                    onPress={() => setSelectedId(null)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.previewCancel}>Cancel</Text>
+                  </Pressable>
+                  </View>
+                </View>
               )}
             </Glass>
 
@@ -1194,10 +1375,10 @@ export default function SpadesScreen({ navigation }) {
         </Glass>
 
         {/* hand: one fanned row, sized to fit the screen width */}
-        <Glass tint={COLORS.glassMedium} radius={22} style={styles.handShelf}>
+        <Glass tint={AERO.panel} radius={24} style={styles.handShelf}>
           <View
             style={{
-              height: sizes.handCardH + LIFT,
+              height: sizes.handCardH + LIFT + SELECT_RISE,
               width: Math.max(handWidth, 1),
               justifyContent: 'center',
             }}
@@ -1205,22 +1386,24 @@ export default function SpadesScreen({ navigation }) {
             {playerHand.map((card, index) => {
               const canPlay = playableIds.has(card.id);
               const dimmed = myTurnToPlay && !canPlay;
+              const isSelected = selectedCard?.id === card.id;
               return (
                 <Pressable
                   key={card.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`${card.rank} of ${SUIT_NAMES[card.suit]}${canPlay ? ', playable' : ''}`}
+                  accessibilityLabel={`${card.rank} of ${SUIT_NAMES[card.suit]}${canPlay ? (isSelected ? ', selected, tap to cancel' : ', playable, tap to preview') : ''}`}
                   disabled={!canPlay}
-                  onPress={() => onPlayCard(card)}
+                  onPress={() => onTapCard(card)}
                   style={[
                     styles.handCard,
                     {
                       width: sizes.handCardW,
                       height: sizes.handCardH,
                       left: index * sizes.step,
-                      top: canPlay ? 0 : LIFT,
+                      top: isSelected ? 0 : canPlay ? SELECT_RISE : LIFT + SELECT_RISE,
                     },
                     canPlay && styles.playableCard,
+                    isSelected && styles.selectedCard,
                     dimmed && styles.unplayableCard,
                   ]}
                 >
@@ -1240,7 +1423,7 @@ export default function SpadesScreen({ navigation }) {
       {/* Difficulty picker: shown when the screen opens and before every new game */}
       <Modal visible={!game.difficulty} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.modalBackdrop}>
-          <Glass tint={COLORS.modalGlass} radius={28} style={styles.modalCard}>
+          <Glass tint={AERO.modal} radius={28} style={styles.modalCard}>
             <Text accessibilityRole="header" style={styles.modalTitle}>
               Choose difficulty
             </Text>
@@ -1253,13 +1436,24 @@ export default function SpadesScreen({ navigation }) {
                 onPress={() => chooseDifficulty(level.key)}
                 style={({ pressed }) => [
                   styles.diffOption,
-                  { backgroundColor: level.bg, borderColor: level.rim },
+                  { backgroundColor: level.wash, borderColor: level.rim },
                   pressed && styles.pressed,
                 ]}
               >
-                <View pointerEvents="none" style={styles.glossButtonShine} />
-                <Text style={styles.diffTitle}>{level.label}</Text>
-                <Text style={styles.diffBlurb}>{level.blurb}</Text>
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={['#FFFFFF', level.wash]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.diffRow}>
+                  <Orb colors={level.orb} />
+                  <View style={styles.diffText}>
+                    <Text style={styles.diffTitle}>{level.label}</Text>
+                    <Text style={styles.diffBlurb}>{level.blurb}</Text>
+                  </View>
+                </View>
               </Pressable>
             ))}
           </Glass>
@@ -1274,13 +1468,16 @@ export default function SpadesScreen({ navigation }) {
         onRequestClose={() => setRulesOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <Glass tint={COLORS.modalGlass} radius={28} style={[styles.modalCard, styles.rulesCard]}>
+          <Glass tint={AERO.modal} radius={28} style={[styles.modalCard, styles.rulesCard]}>
             <Text accessibilityRole="header" style={styles.modalTitle}>
               Rules &amp; how to play
             </Text>
             <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator>
-              {RULES_SECTIONS.map((section) => (
-                <View key={section.title} style={styles.ruleBlock}>
+              {RULES_SECTIONS.map((section, index) => (
+                <View
+                  key={section.title}
+                  style={[styles.ruleBlock, index === RULES_SECTIONS.length - 1 && styles.ruleBlockLast]}
+                >
                   <Text style={styles.ruleHeading}>{section.title}</Text>
                   <Text style={styles.ruleBody}>{section.body}</Text>
                 </View>
@@ -1320,16 +1517,23 @@ export default function SpadesScreen({ navigation }) {
 /* ------------------------------------------------------------------ */
 
 const textGlow = {
-  textShadowColor: COLORS.textGlow,
+  textShadowColor: AERO.shadow,
   textShadowOffset: { width: 0, height: 1 },
   textShadowRadius: 3,
+};
+
+// Stronger halo for the title, which sits directly on open water.
+const titleGlow = {
+  textShadowColor: 'rgba(0,36,70,0.7)',
+  textShadowOffset: { width: 0, height: 2 },
+  textShadowRadius: 8,
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
     flex: 1,
-    gap: 8,
+    gap: 10,
     paddingBottom: 18,
     paddingHorizontal: 12,
     paddingTop: TOP_INSET + 8,
@@ -1337,86 +1541,103 @@ const styles = StyleSheet.create({
 
   /* glass + gloss */
   glass: {
-    borderColor: COLORS.glassRim,
-    borderWidth: 1.5,
+    borderColor: AERO.rim,
+    borderWidth: 1,
     overflow: 'hidden',
-  },
-  gloss: {
-    backgroundColor: COLORS.glassLight,
-    height: '46%',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   glossButton: {
     alignItems: 'center',
-    borderRadius: 22,
+    borderRadius: 999,
     borderWidth: 1.5,
     justifyContent: 'center',
-    minHeight: 42,
+    minHeight: 44,
     overflow: 'hidden',
-    paddingHorizontal: 22,
+    paddingHorizontal: 26,
   },
-  glossButtonSmall: { borderRadius: 16, minHeight: 32, paddingHorizontal: 12 },
+  glossButtonSmall: { minHeight: 34, paddingHorizontal: 14 },
   glossButtonShine: {
-    backgroundColor: COLORS.glassShine,
-    height: '50%',
-    left: 0,
+    borderRadius: 999,
+    height: '46%',
+    left: 10,
     position: 'absolute',
-    right: 0,
-    top: 0,
+    right: 10,
+    top: 2,
   },
-  glossButtonText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 16, ...textGlow },
+  glossButtonText: { fontFamily: FONTS.bodyBold, fontSize: 16, letterSpacing: 0.3 },
   glossButtonTextSmall: { fontSize: 13 },
-  disabledButton: { opacity: 0.45 },
+  disabledButton: { opacity: 0.4 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  orb: {
+    alignItems: 'center',
+    borderColor: 'rgba(255,255,255,0.85)',
+    borderWidth: 1.5,
+    justifyContent: 'center',
+  },
 
   /* top bar */
   topBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   topPill: {
     alignItems: 'center',
-    backgroundColor: COLORS.glassControl,
-    borderColor: COLORS.glassRim,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    backgroundColor: 'rgba(6,66,112,0.5)',
+    borderColor: AERO.rim,
+    borderRadius: 999,
+    borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 36,
-    minWidth: 88,
-    paddingHorizontal: 12,
+    minHeight: 38,
+    overflow: 'hidden',
+    width: 96,
   },
-  topPillText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 14, ...textGlow },
-  title: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 28, ...textGlow },
+  topPillText: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 14, ...textGlow },
+  title: { color: '#FFFFFF', fontFamily: FONTS.heading, fontSize: 30, ...titleGlow },
 
   /* score strip */
-  scoreCard: { alignItems: 'center', flexDirection: 'row', paddingVertical: 6 },
-  scoreTeam: { alignItems: 'center', flex: 1 },
-  scoreMiddle: { alignItems: 'center', width: 84 },
-  scoreLabel: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 12, ...textGlow },
-  score: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 28, lineHeight: 32, ...textGlow },
-  scoreDetail: { color: COLORS.glassText, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
-  overtime: { color: COLORS.sunYellow, fontFamily: FONTS.bodyBold, fontSize: 11, ...textGlow },
+  scoreCard: { alignItems: 'center', flexDirection: 'row', paddingHorizontal: 6, paddingVertical: 10 },
+  scoreTeam: { alignItems: 'center', flex: 1, gap: 2 },
+  scoreMiddle: { alignItems: 'center', gap: 6, width: 96 },
+  scoreDivider: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    marginVertical: 4,
+    width: 1,
+  },
+  scoreLabel: { color: AERO.textMuted, fontFamily: FONTS.bodyBold, fontSize: 12, letterSpacing: 0.4, ...textGlow },
+  score: { color: '#FFFFFF', fontFamily: FONTS.heading, fontSize: 34, lineHeight: 38, ...textGlow },
+  handLabel: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 13, ...textGlow },
+  chip: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  chipText: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 11 },
+  overtime: { color: AERO.gold, fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1, ...textGlow },
 
   /* table */
   table: {
     flex: 1,
     paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   statusPill: {
     alignItems: 'center',
     alignSelf: 'center',
     maxWidth: '100%',
-    paddingHorizontal: 16,
-    paddingVertical: 5,
+    paddingHorizontal: 20,
+    paddingVertical: 6,
   },
-  statusTitle: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 16, ...textGlow },
-  statusHint: { color: COLORS.glassTextMuted, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
-  northWrap: { alignSelf: 'center', marginTop: 6 },
+  statusTitle: { color: '#FFFFFF', fontFamily: FONTS.heading, fontSize: 17, ...textGlow },
+  statusHint: { color: AERO.textMuted, fontFamily: FONTS.body, fontSize: 12, ...textGlow },
+  northWrap: { alignSelf: 'center', marginTop: 8 },
   southWrap: { alignSelf: 'center', marginTop: 2 },
-  middleRow: { alignItems: 'stretch', flex: 1, flexDirection: 'row', marginVertical: 6 },
+  middleRow: { alignItems: 'stretch', flex: 1, flexDirection: 'row', marginVertical: 8 },
   sideWrap: { justifyContent: 'center', width: SIDE_W },
-  trickArea: { alignItems: 'center', flex: 1, justifyContent: 'center', marginHorizontal: 4 },
+  trickArea: {
+    alignItems: 'center',
+    borderColor: AERO.rimSoft,
+    flex: 1,
+    justifyContent: 'center',
+    marginHorizontal: 6,
+  },
   trickImage: {
     position: 'absolute',
     shadowColor: COLORS.cardShadow,
@@ -1424,60 +1645,95 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 3,
   },
-  centerText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 13, textAlign: 'center', ...textGlow },
+  trickDim: {
+    backgroundColor: 'rgba(2,28,54,0.62)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  halo: { borderRadius: 12, position: 'absolute' },
+  previewWrap: {
+    alignItems: 'center',
+    bottom: 0,
+    left: 0,
+    paddingBottom: 14,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  previewCardSlot: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  previewActions: { alignItems: 'center', gap: 10 },
+  previewImage: {
+    shadowColor: COLORS.cardShadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+  },
+  previewCancel: { color: AERO.textMuted, fontFamily: FONTS.bodyBold, fontSize: 13, ...textGlow },
+  centerText: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 14, textAlign: 'center', ...textGlow },
 
   /* bidding */
-  bidPanel: { alignItems: 'center', gap: 8 },
-  bidLabel: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 13, ...textGlow },
-  bidRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  bidPanel: { alignItems: 'center', gap: 12 },
+  bidLabel: { color: AERO.textMuted, fontFamily: FONTS.bodyBold, fontSize: 12, letterSpacing: 1.2, ...textGlow },
+  stepper: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(3,48,88,0.32)',
+    borderColor: AERO.rimSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 5,
+  },
   bidAdjust: { borderRadius: 20, height: 40, minHeight: 40, paddingHorizontal: 0, width: 40 },
+  bidAdjustText: { fontSize: 24, lineHeight: 28 },
   bidNumber: {
-    color: COLORS.pearl,
+    color: '#FFFFFF',
     fontFamily: FONTS.heading,
-    fontSize: 26,
-    minWidth: 54,
+    fontSize: 30,
+    minWidth: 52,
     textAlign: 'center',
     ...textGlow,
   },
-  bidConfirm: { minWidth: 96 },
+  bidConfirm: { minWidth: 120 },
 
   /* badges */
   badge: {
     alignItems: 'center',
-    backgroundColor: COLORS.glassSubtle,
-    borderColor: 'transparent',
+    backgroundColor: 'rgba(3,48,88,0.34)',
+    borderColor: 'rgba(255,255,255,0.2)',
     borderRadius: 18,
-    borderWidth: 1.5,
+    borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
-  badgeH: { flexDirection: 'row', gap: 6 },
-  badgeV: { paddingVertical: 6, width: '100%' },
+  badgeH: { flexDirection: 'row', gap: 8, paddingHorizontal: 12 },
+  badgeV: { gap: 2, paddingVertical: 8, width: '100%' },
   badgeActive: {
-    backgroundColor: COLORS.activeGlowFill,
-    borderColor: COLORS.limeGlow,
-    shadowColor: COLORS.limeGlow,
+    backgroundColor: 'rgba(120,240,190,0.2)',
+    borderColor: AERO.mint,
+    shadowColor: AERO.mint,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
+    shadowOpacity: 0.7,
     shadowRadius: 8,
   },
   fishFrame: { alignItems: 'center', height: 30, justifyContent: 'center', width: 44 },
   fish: { position: 'relative' },
   badgeTextH: { alignItems: 'flex-start' },
-  badgeTextV: { alignItems: 'center' },
-  playerName: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 11, ...textGlow },
-  playerStats: { color: COLORS.glassTextMuted, fontFamily: FONTS.body, fontSize: 10, ...textGlow },
+  badgeTextV: { alignItems: 'center', alignSelf: 'stretch' },
+  playerName: { color: '#FFFFFF', fontFamily: FONTS.bodyBold, fontSize: 12, ...textGlow },
+  playerStats: { color: AERO.textMuted, fontFamily: FONTS.body, fontSize: 11, ...textGlow },
   dealerChip: {
-    backgroundColor: COLORS.coral,
-    borderColor: COLORS.glassRim,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 0,
+    backgroundColor: AERO.gold,
+    borderRadius: 999,
+    marginTop: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
   },
-  dealerChipText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 9 },
+  dealerChipText: { color: AERO.goldInk, fontFamily: FONTS.bodyBold, fontSize: 10, letterSpacing: 0.3 },
 
   /* result overlay */
   resultOverlay: {
@@ -1491,15 +1747,15 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
   },
-  resultCard: { alignItems: 'center', gap: 3, maxWidth: 360, paddingHorizontal: 20, paddingVertical: 16, width: '100%' },
-  handOutcome: { fontFamily: FONTS.heading, fontSize: 22, marginBottom: 4, textAlign: 'center', ...textGlow },
-  handWon: { color: COLORS.sunYellow },
-  handMissed: { color: COLORS.pearl },
-  resultText: { color: COLORS.pearl, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center', ...textGlow },
-  resultButton: { marginTop: 10 },
+  resultCard: { alignItems: 'center', gap: 4, maxWidth: 360, paddingHorizontal: 20, paddingVertical: 18, width: '100%' },
+  handOutcome: { fontFamily: FONTS.heading, fontSize: 24, marginBottom: 4, textAlign: 'center', ...textGlow },
+  handWon: { color: AERO.gold },
+  handMissed: { color: '#FFFFFF' },
+  resultText: { color: '#FFFFFF', fontFamily: FONTS.body, fontSize: 14, textAlign: 'center', ...textGlow },
+  resultButton: { marginTop: 12 },
 
   /* hand */
-  handShelf: { alignItems: 'center', paddingBottom: 6, paddingHorizontal: 8, paddingTop: 6 },
+  handShelf: { alignItems: 'center', paddingBottom: 8, paddingHorizontal: 8, paddingTop: 8 },
   handCard: {
     backgroundColor: COLORS.pearl,
     borderColor: COLORS.cardRim,
@@ -1514,35 +1770,37 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   playableCard: {
-    borderColor: COLORS.limeGlow,
+    borderColor: AERO.mint,
     borderWidth: 2,
-    shadowColor: COLORS.limeGlow,
+    shadowColor: AERO.mint,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.95,
-    shadowRadius: 7,
+    shadowOpacity: 0.85,
+    shadowRadius: 6,
+  },
+  selectedCard: {
+    elevation: 10,
+    shadowOpacity: 1,
+    shadowRadius: 9,
+    transform: [{ scale: 1.08 }],
+    zIndex: 10,
   },
   unplayableCard: { opacity: 0.5 },
   handImage: { height: '100%', width: '100%' },
-  emptyHand: { color: COLORS.pearl, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center', ...textGlow },
+  emptyHand: { color: '#FFFFFF', fontFamily: FONTS.body, fontSize: 14, textAlign: 'center', ...textGlow },
 
   /* difficulty picker */
   diffOption: {
     alignSelf: 'stretch',
     borderRadius: 20,
-    borderWidth: 1.5,
-    gap: 2,
+    borderWidth: 1,
     overflow: 'hidden',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  diffTitle: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 20, ...textGlow },
-  diffBlurb: {
-    color: COLORS.glassTextStrong,
-    fontFamily: FONTS.body,
-    fontSize: 13,
-    lineHeight: 18,
-    ...textGlow,
-  },
+  diffRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  diffText: { flex: 1, gap: 2 },
+  diffTitle: { color: AERO.ink, fontFamily: FONTS.heading, fontSize: 19 },
+  diffBlurb: { color: AERO.inkSoft, fontFamily: FONTS.body, fontSize: 13, lineHeight: 18 },
 
   /* modals */
   modalBackdrop: {
@@ -1555,18 +1813,24 @@ const styles = StyleSheet.create({
   modalCard: {
     alignItems: 'center',
     borderColor: COLORS.aquaRim,
-    gap: 8,
+    gap: 10,
     maxWidth: 420,
     padding: 22,
     width: '100%',
   },
   rulesCard: { alignItems: 'stretch', maxHeight: '85%' },
   rulesScroll: { flexGrow: 0, flexShrink: 1, marginVertical: 6 },
-  modalTitle: { color: COLORS.aeroInk, fontFamily: FONTS.heading, fontSize: 26, textAlign: 'center' },
-  modalWinner: { color: COLORS.aeroInk, fontFamily: FONTS.heading, fontSize: 22, textAlign: 'center' },
-  modalBody: { color: COLORS.aeroInkSoft, fontFamily: FONTS.body, fontSize: 15, textAlign: 'center' },
+  modalTitle: { color: AERO.ink, fontFamily: FONTS.heading, fontSize: 26, textAlign: 'center' },
+  modalWinner: { color: AERO.ink, fontFamily: FONTS.heading, fontSize: 22, textAlign: 'center' },
+  modalBody: { color: AERO.inkSoft, fontFamily: FONTS.body, fontSize: 15, lineHeight: 21, textAlign: 'center' },
   modalButton: { alignSelf: 'center', marginTop: 8 },
-  ruleBlock: { marginBottom: 12 },
-  ruleHeading: { color: COLORS.aeroInk, fontFamily: FONTS.bodyBold, fontSize: 15 },
-  ruleBody: { color: COLORS.aeroInkSoft, fontFamily: FONTS.body, fontSize: 14, lineHeight: 20 },
+  ruleBlock: {
+    borderBottomColor: 'rgba(11,74,116,0.12)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 12,
+    paddingBottom: 12,
+  },
+  ruleBlockLast: { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
+  ruleHeading: { color: AERO.ink, fontFamily: FONTS.bodyBold, fontSize: 15, marginBottom: 2 },
+  ruleBody: { color: AERO.inkSoft, fontFamily: FONTS.body, fontSize: 14, lineHeight: 21 },
 });
