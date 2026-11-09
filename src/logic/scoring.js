@@ -47,6 +47,7 @@ export function scoreHand(game) {
     const regularBid = players.reduce((sum, i) => sum + (game.players[i].bid || 0), 0);
     const nilPlayers = players.filter((i) => game.players[i].bid === 0);
     const nilTricks = nilPlayers.reduce((sum, i) => sum + game.players[i].tricks, 0);
+    // Tricks taken by nil bidders count toward nil only, not the team's regular bid.
     const regularTricks = Math.max(0, teamTricks[team] - nilTricks);
     const madeBid = regularTricks >= regularBid;
     if (team === 0) yourTeamMadeBid = madeBid;
@@ -73,6 +74,7 @@ export function scoreHand(game) {
     });
 
     if (nextBags[team] >= 10) {
+      // Carry any remainder after applying one -100 penalty per 10 bags.
       const penalties = Math.floor(nextBags[team] / 10);
       nextScores[team] -= penalties * 100;
       nextBags[team] -= penalties * 10;

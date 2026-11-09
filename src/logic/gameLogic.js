@@ -71,6 +71,7 @@ export function dealHand(game) {
   };
 }
 
+// Bids proceed clockwise from the player left of the dealer; play starts with the dealer.
 export function applyBid(game, playerIndex, bid) {
   const players = game.players.map((player, index) =>
     index === playerIndex ? { ...player, bid } : player
@@ -108,6 +109,7 @@ export function playCard(game, playerIndex, card) {
     trick,
     turn: nextTurn,
     leadSuit: game.leadSuit || card.suit,
+    // Playing any spade breaks trump for the rest of the hand.
     spadesBroken: game.spadesBroken || card.suit === 'S',
     message:
       trick.length === 4

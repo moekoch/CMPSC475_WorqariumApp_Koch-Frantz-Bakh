@@ -12,6 +12,7 @@ import { teamOf } from './scoring';
 export function estimateBid(hand) {
   const suitCounts = SUITS.map((suit) => hand.filter((card) => card.suit === suit).length);
   const spadeCount = suitCounts[SUITS.indexOf('S')];
+  // Extra trump length and high side-suit cards are the basic sources of likely tricks.
   let points = Math.max(0, spadeCount - 3);
 
   for (const card of hand) {
@@ -27,6 +28,7 @@ function handPoints(hand) {
   const spadeCount = bySuit.S.length;
   let points = 0;
 
+  // Honors become more dependable when supported by length in their suit.
   bySuit.S.forEach((card) => {
     const value = RANK_VALUES[card.rank];
     if (value === 14) points += 1;
@@ -56,6 +58,7 @@ function nilDanger(hand) {
     const value = RANK_VALUES[card.rank];
     let danger =
       value === 14 ? 3 : value === 13 ? 2 : value === 12 ? 1.2 : value === 11 ? 0.6 : value === 10 ? 0.25 : 0;
+    // High spades are especially likely to take a trick when trying to go nil.
     if (card.suit === 'S' && value >= 9) danger += 1.5;
     return sum + danger;
   }, 0);
@@ -66,6 +69,7 @@ export function chooseBotBid(game, playerIndex) {
   const level = game.difficulty;
   const base = estimateBid(hand);
 
+  // Easy bots deliberately vary their basic estimate; harder levels use hand context.
   if (level === 'easy') {
     const noise = Math.floor(Math.random() * 3) - 1;
     return Math.max(0, Math.min(13, base + noise));
@@ -73,6 +77,7 @@ export function chooseBotBid(game, playerIndex) {
 
   const danger = nilDanger(hand);
   const spades = hand.filter((card) => card.suit === 'S').length;
+  // Medium and hard bots only attempt nil when their hand's estimated risk is low.
   if (level === 'hard') {
     if (danger < 3.5 && spades <= 3) return 0;
   } else if (danger < 4.5) {
@@ -92,11 +97,13 @@ export function chooseBotBid(game, playerIndex) {
 }
 
 function getKnowledge(game, me) {
+  // Track played cards and suits each player has shown they cannot follow.
   const seen = new Set(game.players[me].hand.map((card) => card.id));
   const voids = [new Set(), new Set(), new Set(), new Set()];
   const record = (trick, leadSuit) =>
     trick.forEach(({ playerIndex, card }) => {
       seen.add(card.id);
+      // Failing to follow the lead suit proves this player is void in it.
       if (card.suit !== leadSuit) voids[playerIndex].add(leadSuit);
     });
   game.history.forEach((hand) => record(hand.trick, hand.leadSuit));
@@ -105,6 +112,7 @@ function getKnowledge(game, me) {
 }
 
 function isSafeMaster(card, knowledge, me) {
+  // A card is a master only if no higher card remains unseen.
   const higherUnseen = RANKS.some(
     (rank) =>
       RANK_VALUES[rank] > RANK_VALUES[card.rank] &&
@@ -114,6 +122,7 @@ function isSafeMaster(card, knowledge, me) {
   if (card.suit === 'S') return true;
   const spadesLeft = RANKS.some((rank) => !knowledge.seen.has(`${rank}S`));
   if (!spadesLeft) return true;
+  // An opponent void in this suit could still trump the card.
   return [0, 1, 2, 3]
     .filter((playerIndex) => teamOf(playerIndex) !== teamOf(me))
     .every((playerIndex) => !knowledge.voids[playerIndex].has(card.suit));
@@ -121,6 +130,7 @@ function isSafeMaster(card, knowledge, me) {
 
 function tricksNeeded(game, me) {
   const mates = teamOf(me) === 0 ? [0, 2] : [1, 3];
+  // Nil bids do not contribute to the team's ordinary trick target.
   const bid = mates.reduce((sum, index) => sum + (game.players[index].bid || 0), 0);
   const tricks = mates.reduce(
     (sum, index) =>
@@ -134,12 +144,14 @@ function mediumCard(game, me, choices) {
   if (game.trick.length === 0) {
     const nonSpades = choices.filter((card) => card.suit !== 'S');
     const aces = nonSpades.filter((card) => card.rank === 'A');
+    // Cash a side-suit ace when leading; otherwise preserve trump by leading low.
     if (aces.length) return aces[0];
     return lowestCard(nonSpades.length ? nonSpades : choices);
   }
   const leadSuit = game.trick[0].card.suit;
   const winner = winningPlay(game.trick);
   if (teamOf(winner.playerIndex) === teamOf(me)) return lowestCard(choices);
+  // Spend only the lowest card that can overtake an opponent's winning play.
   const winners = choices.filter((card) => beats(card, winner, leadSuit));
   return winners.length ? lowestCard(winners) : lowestCard(choices);
 }
@@ -156,10 +168,12 @@ function hardCard(game, me, choices) {
   const bagAvoid = need <= 0 && !partnerNil;
   const trick = game.trick;
 
+  // Lead safely when defending nil bids or avoiding extra tricks (bags).
   if (trick.length === 0) {
     const nonSpades = choices.filter((card) => card.suit !== 'S');
     const lowLead = lowestCard(nonSpades.length ? nonSpades : choices);
     if (oppNil.length || bagAvoid) return lowLead;
+    // Prefer a known winner when the team still needs tricks.
     const masters = nonSpades.filter((card) => isSafeMaster(card, knowledge, me));
     if (masters.length) return highestCard(masters);
     const spadeMasters = choices.filter(
@@ -177,6 +191,7 @@ function hardCard(game, me, choices) {
   const after = 3 - trick.length;
   const hasPlayed = (playerIndex) => trick.some((play) => play.playerIndex === playerIndex);
 
+  // If partner's nil is threatened, overtake their play to take the trick instead.
   if (partnerNil) {
     if (winner.playerIndex === partner) {
       return winners.length ? lowestCard(winners) : lowestCard(choices);
@@ -187,10 +202,12 @@ function hardCard(game, me, choices) {
   if (oppNil.length) {
     const nilStillToPlay = oppNil.some((playerIndex) => !hasPlayed(playerIndex));
     const nilWinning = oppNil.includes(winner.playerIndex);
+    // Avoid winning while an opponent going nil could still be forced to take it.
     if (nilStillToPlay || nilWinning) return lowestCard(choices);
   }
 
   if (bagAvoid) {
+    // When the bid is already met, discard high losers rather than collect bags.
     if (losers.length) {
       const sideLosers = losers.filter((card) => card.suit !== 'S');
       return highestCard(sideLosers.length ? sideLosers : losers);
@@ -201,6 +218,7 @@ function hardCard(game, me, choices) {
   if (partnerWinning) return lowestCard(choices);
   if (winners.length) {
     if (after === 0) return lowestCard(winners);
+    // Before the last play, favor a winner that is unlikely to be trumped later.
     const ledWinners = winners.filter((card) => card.suit === leadSuit);
     if (ledWinners.length) {
       const secure = ledWinners.filter((card) => isSafeMaster(card, knowledge, me));
@@ -215,9 +233,11 @@ export function chooseBotCard(game, me) {
   const player = game.players[me];
   const level = game.difficulty;
   const choices = legalCards(player.hand, game.trick, game.spadesBroken);
+  // A forced play needs no strategic comparison.
   if (choices.length === 1) return choices[0];
 
   if (player.bid === 0 && player.tricks === 0) {
+    // Keep a nil bidder under the current winner when possible.
     if (game.trick.length === 0 || level === 'easy') return lowestCard(choices);
     const leadSuit = game.trick[0].card.suit;
     const winner = winningPlay(game.trick);

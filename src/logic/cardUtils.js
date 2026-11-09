@@ -30,8 +30,10 @@ export function legalCards(hand, trick, spadesBroken) {
     const followingSuit = hand.filter((card) => card.suit === ledSuit);
     if (!followingSuit.length) return hand;
     if (ledSuit === 'S') return followingSuit;
+    // When void in the led suit, allow either an off-suit discard or a trump.
     return [...followingSuit, ...hand.filter((card) => card.suit === 'S')];
   }
+  // Spades cannot be led until broken, unless the player's hand is all spades.
   if (!spadesBroken) {
     const nonSpades = hand.filter((card) => card.suit !== 'S');
     return nonSpades.length ? nonSpades : hand;
@@ -44,6 +46,7 @@ export function trumpStrength(card, leadSuit) {
 }
 
 export function winningPlay(trick) {
+  // Trump outranks the led suit; otherwise the highest card of the led suit wins.
   const leadSuit = trick[0].card.suit;
   return trick.reduce((winner, play) => {
     const strength = trumpStrength(play.card, leadSuit);
