@@ -6,14 +6,17 @@ export default function Card({
   card,
   style,
   imageStyle,
+  imageContainerStyle,
+  resizeMode = 'contain',
   onPress,
   accessibilityLabel,
+  accessibilityState,
   disabled = false,
   overlayStyle,
   entering,
   layout,
 }) {
-  const image = <Image source={CARD_IMAGES[card.id]} resizeMode="contain" style={imageStyle} />;
+  const image = <Image source={CARD_IMAGES[card.id]} resizeMode={resizeMode} style={imageStyle} />;
 
   if (!onPress) {
     return (
@@ -28,9 +31,10 @@ export default function Card({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={accessibilityState}
         disabled={disabled}
         onPress={onPress}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, imageContainerStyle]}
       >
         {image}
         {overlayStyle && <View pointerEvents="none" style={overlayStyle} />}

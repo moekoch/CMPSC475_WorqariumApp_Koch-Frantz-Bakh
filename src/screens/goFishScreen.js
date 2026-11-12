@@ -9,68 +9,18 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Card from '../components/Card';
+import { AERO, Glass, GlossButton, TopPill } from '../components/GoFishUI';
 import WaterBackground from '../components/aquarium/WaterBackground';
+import {
+  CARD_BACK,
+  RANKS,
+  SUITS,
+  SUIT_NAMES,
+} from '../constants/gameConstants';
 import { COLORS, FONTS, RADII } from '../constants/theme';
 
-const CARD_BACK = require('../../assets/images/cards/gray_back.png');
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-const SUITS = ['C', 'D', 'H', 'S'];
 const RANK_NAMES = { A: 'Aces', J: 'Jacks', Q: 'Queens', K: 'Kings' };
-const SUIT_NAMES = { C: 'clubs', D: 'diamonds', H: 'hearts', S: 'spades' };
-const CARD_IMAGES = {
-  AC: require('../../assets/images/cards/AC.png'),
-  AD: require('../../assets/images/cards/AD.png'),
-  AH: require('../../assets/images/cards/AH.png'),
-  AS: require('../../assets/images/cards/AS.png'),
-  '2C': require('../../assets/images/cards/2C.png'),
-  '2D': require('../../assets/images/cards/2D.png'),
-  '2H': require('../../assets/images/cards/2H.png'),
-  '2S': require('../../assets/images/cards/2S.png'),
-  '3C': require('../../assets/images/cards/3C.png'),
-  '3D': require('../../assets/images/cards/3D.png'),
-  '3H': require('../../assets/images/cards/3H.png'),
-  '3S': require('../../assets/images/cards/3S.png'),
-  '4C': require('../../assets/images/cards/4C.png'),
-  '4D': require('../../assets/images/cards/4D.png'),
-  '4H': require('../../assets/images/cards/4H.png'),
-  '4S': require('../../assets/images/cards/4S.png'),
-  '5C': require('../../assets/images/cards/5C.png'),
-  '5D': require('../../assets/images/cards/5D.png'),
-  '5H': require('../../assets/images/cards/5H.png'),
-  '5S': require('../../assets/images/cards/5S.png'),
-  '6C': require('../../assets/images/cards/6C.png'),
-  '6D': require('../../assets/images/cards/6D.png'),
-  '6H': require('../../assets/images/cards/6H.png'),
-  '6S': require('../../assets/images/cards/6S.png'),
-  '7C': require('../../assets/images/cards/7C.png'),
-  '7D': require('../../assets/images/cards/7D.png'),
-  '7H': require('../../assets/images/cards/7H.png'),
-  '7S': require('../../assets/images/cards/7S.png'),
-  '8C': require('../../assets/images/cards/8C.png'),
-  '8D': require('../../assets/images/cards/8D.png'),
-  '8H': require('../../assets/images/cards/8H.png'),
-  '8S': require('../../assets/images/cards/8S.png'),
-  '9C': require('../../assets/images/cards/9C.png'),
-  '9D': require('../../assets/images/cards/9D.png'),
-  '9H': require('../../assets/images/cards/9H.png'),
-  '9S': require('../../assets/images/cards/9S.png'),
-  '10C': require('../../assets/images/cards/10C.png'),
-  '10D': require('../../assets/images/cards/10D.png'),
-  '10H': require('../../assets/images/cards/10H.png'),
-  '10S': require('../../assets/images/cards/10S.png'),
-  JC: require('../../assets/images/cards/JC.png'),
-  JD: require('../../assets/images/cards/JD.png'),
-  JH: require('../../assets/images/cards/JH.png'),
-  JS: require('../../assets/images/cards/JS.png'),
-  QC: require('../../assets/images/cards/QC.png'),
-  QD: require('../../assets/images/cards/QD.png'),
-  QH: require('../../assets/images/cards/QH.png'),
-  QS: require('../../assets/images/cards/QS.png'),
-  KC: require('../../assets/images/cards/KC.png'),
-  KD: require('../../assets/images/cards/KD.png'),
-  KH: require('../../assets/images/cards/KH.png'),
-  KS: require('../../assets/images/cards/KS.png'),
-};
 
 function getRankName(rank) {
   return RANK_NAMES[rank] || `${rank}s`;
@@ -80,7 +30,7 @@ function createDeck() {
   const deck = RANKS.flatMap((rank) =>
     SUITS.map((suit) => {
       const code = `${rank}${suit}`;
-      return { code, rank, image: CARD_IMAGES[code] };
+      return { id: code, code, rank };
     }),
   );
 
@@ -311,23 +261,30 @@ export default function GoFishScreen({ navigation }) {
   );
 
   return (
-    <WaterBackground style={styles.root}>
+    <WaterBackground
+      style={styles.root}
+      imageSource={require('../../assets/images/backgrounds/gameOcean.jpg')}
+    >
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 14 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
+          <TopPill
+            label="‹ Games"
+            accessibilityLabel="Back to Games"
             onPress={() => navigation?.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>‹ Games</Text>
-          </Pressable>
+            styles={styles}
+          />
           <Text style={styles.title}>Go Fish</Text>
         </View>
 
-        <View style={styles.table}>
+        <Glass
+          tint={AERO.panel}
+          radius={28}
+          style={styles.table}
+          styles={styles}
+        >
           <View style={styles.opponentArea}>
             <Image
               accessibilityLabel="Shark"
@@ -392,9 +349,9 @@ export default function GoFishScreen({ navigation }) {
                 const rank = card.rank;
                 const selected = game.selectedRank === rank;
                 return (
-                  <Pressable
+                  <Card
                     key={card.code}
-                    accessibilityRole="button"
+                    card={card}
                     accessibilityLabel={`${card.code.slice(0, -1)} of ${
                       SUIT_NAMES[card.code.slice(-1)]
                     }, ${
@@ -406,15 +363,14 @@ export default function GoFishScreen({ navigation }) {
                       selectedRank:
                         current.gameOver || current.turn !== 'player' ? null : rank,
                     }))}
-                    style={[styles.handCard, selected && styles.selectedCard]}
-                  >
-                    <Image
-                      accessibilityIgnoresInvertColors
-                      source={card.image}
-                      resizeMode="stretch"
-                      style={styles.cardImage}
-                    />
-                  </Pressable>
+                    imageContainerStyle={styles.cardImageContainer}
+                    imageStyle={styles.cardImage}
+                    resizeMode="stretch"
+                    style={[
+                      styles.handCard,
+                      selected && styles.selectedCard,
+                    ]}
+                  />
                 );
               })}
             </ScrollView>
@@ -425,27 +381,19 @@ export default function GoFishScreen({ navigation }) {
             Books: {game.playerBooks.length}
           </Text>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{
-              disabled: !game.selectedRank || game.gameOver || game.turn !== 'player',
-            }}
-            disabled={!game.selectedRank || game.gameOver || game.turn !== 'player'}
-            onPress={handleAsk}
-            style={[
-              styles.askButton,
-              (!game.selectedRank || game.gameOver) && styles.disabledButton,
-            ]}
-          >
-            <Text style={styles.askButtonText}>
-              {game.gameOver
+          <GlossButton
+            label={
+              game.gameOver
                 ? 'Round over'
                 : game.selectedRank
                   ? `Ask for ${getRankName(game.selectedRank)}`
-                  : 'Choose a card to ask'}
-            </Text>
-          </Pressable>
-        </View>
+                  : 'Choose a card to ask'
+            }
+            disabled={!game.selectedRank || game.gameOver || game.turn !== 'player'}
+            onPress={handleAsk}
+            styles={styles}
+          />
+        </Glass>
       </ScrollView>
       <Modal
         animationType="fade"
@@ -474,6 +422,18 @@ export default function GoFishScreen({ navigation }) {
   );
 }
 
+const textGlow = {
+  textShadowColor: 'rgba(0,36,70,0.8)',
+  textShadowOffset: { width: 0, height: 2 },
+  textShadowRadius: 4,
+};
+
+const titleGlow = {
+  textShadowColor: 'rgba(0,36,70,0.7)',
+  textShadowOffset: { width: 0, height: 3 },
+  textShadowRadius: 6,
+};
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
@@ -486,6 +446,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginBottom: 16,
+    position: 'relative',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -496,27 +457,56 @@ const styles = StyleSheet.create({
     color: COLORS.deepWater,
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
+    ...textGlow,
+  },
+  topPill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(6,66,112,0.5)',
+    borderColor: AERO.rim,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    left: 0,
+    minHeight: 38,
+    overflow: 'hidden',
+    position: 'absolute',
+    width: 96,
+  },
+  topPillText: {
+    color: '#FFFFFF',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 14,
+    ...textGlow,
   },
   title: {
-    color: COLORS.ink,
+    color: COLORS.surfaceFoam,
     fontFamily: FONTS.heading,
     fontSize: 32,
     marginTop: 2,
     fontWeight: 'bold',
+    ...titleGlow,
   },
   subtitle: {
     color: COLORS.inkSoft,
     fontFamily: FONTS.body,
     fontSize: 14,
     textAlign: 'center',
+    ...textGlow,
   },
   table: {
-    backgroundColor: 'rgba(251,253,249,0.94)',
     borderColor: COLORS.glassEdge,
     borderRadius: 28,
     borderWidth: 1,
+    overflow: 'hidden',
     padding: 16,
     width: '100%',
+    ...RADII.organicA,
+  },
+  glass: {
+    overflow: 'hidden',
+  },
+  gloss: {
+    ...StyleSheet.absoluteFillObject,
     ...RADII.organicA,
   },
   opponentArea: {
@@ -543,15 +533,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionTitle: {
-    color: COLORS.ink,
+    color: AERO.textMuted,
     fontFamily: FONTS.heading,
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 15,
+    ...textGlow,
   },
   cardCount: {
-    color: COLORS.inkFaint,
+    color: AERO.textMuted,
     fontFamily: FONTS.body,
     fontSize: 13,
+    ...textGlow,
   },
   hiddenCards: {
     alignItems: 'center',
@@ -568,30 +559,34 @@ const styles = StyleSheet.create({
   },
   overlapCard: { marginLeft: -20 },
   extraCards: {
-    color: COLORS.inkSoft,
+    color: AERO.textMuted,
     fontFamily: FONTS.bodyBold,
     fontSize: 12,
     marginLeft: 8,
+    ...textGlow,
   },
   emptyHint: {
-    color: COLORS.inkFaint,
+    color: AERO.textMuted,
     fontFamily: FONTS.body,
     fontSize: 14,
     paddingVertical: 8,
+    ...textGlow,
   },
   booksText: {
-    color: COLORS.seaweed,
+    color: AERO.mint,
     fontFamily: FONTS.bodyBold,
     fontSize: 13,
     marginTop: 7,
     textAlign: 'center',
+    ...textGlow,
   },
   handSubtitle: {
-    color: COLORS.inkSoft,
+    color: AERO.textMuted,
     fontFamily: FONTS.body,
     fontSize: 13,
     marginTop: 4,
     textAlign: 'center',
+    ...textGlow,
   },
   pondArea: {
     alignItems: 'center',
@@ -606,13 +601,14 @@ const styles = StyleSheet.create({
   },
   emptyPond: { opacity: 0.35 },
   pondCount: {
-    color: COLORS.inkSoft,
+    color: AERO.textMuted,
     fontFamily: FONTS.body,
     fontSize: 12,
     marginTop: 4,
+    ...textGlow,
   },
   messageBox: {
-    backgroundColor: COLORS.skylight,
+    backgroundColor: AERO.panelSoft,
     borderRadius: 14,
     minHeight: 48,
     justifyContent: 'center',
@@ -620,11 +616,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   messageText: {
-    color: COLORS.ink,
-    fontFamily: FONTS.bodyBold,
+    color: COLORS.pearl,
+    fontFamily: FONTS.body,
     fontSize: 14,
     textAlign: 'center',
-    fontWeight: 'bold',
+    ...textGlow,
   },
   handHeader: {
     alignItems: 'center',
@@ -637,39 +633,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 4,
-    paddingVertical: 10,
+    paddingVertical: 18,
   },
   handCard: {
     borderColor: 'transparent',
     borderRadius: 9,
     borderWidth: 3,
+    height: 104,
     padding: 1,
+    width: 74,
   },
   selectedCard: {
-    borderColor: COLORS.coral,
-    transform: [{ translateY: -5 }],
+    borderColor: AERO.mint,
+    borderWidth: 2,
+    elevation: 10,
+    shadowColor: AERO.mint,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 9,
+    transform: [{ translateY: -14 }, { scale: 1.08 }],
+    zIndex: 10,
   },
   cardImage: {
     borderRadius: 5,
     height: 96,
     width: 66,
   },
-  askButton: {
+  cardImageContainer: {
     alignItems: 'center',
-    backgroundColor: COLORS.deepWater,
+    justifyContent: 'center',
+  },
+  glossButton: {
+    alignItems: 'center',
+    borderWidth: 1,
     borderRadius: 16,
     marginTop: 4,
     minHeight: 48,
     justifyContent: 'center',
+    overflow: 'hidden',
     paddingHorizontal: 20,
     paddingVertical: 10,
+    width: '100%',
   },
-  disabledButton: { backgroundColor: COLORS.inkFaint },
-  askButtonText: {
-    color: COLORS.pearl,
-    fontFamily: FONTS.bodyBold,
+  buttonGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
+  },
+  glossButtonShine: {
+    height: '55%',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  glossButtonText: {
+    fontFamily: FONTS.body,
     fontSize: 16,
     textAlign: 'center',
+    ...textGlow,
+  },
+  disabledButton: { opacity: 0.55 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  glossButtonSmall: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   gameOverOverlay: {
     flex: 1,
@@ -695,7 +723,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     marginBottom: 10,
     textAlign: 'center',
-    fontWeight: 'bold',
+    ...textGlow,
   },
   playAgainButton: {
     alignItems: 'center',
@@ -710,6 +738,7 @@ const styles = StyleSheet.create({
     color: COLORS.pearl,
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
+    ...textGlow,
   },
   newGameButton: {
     marginTop: 14,
@@ -720,5 +749,6 @@ const styles = StyleSheet.create({
     color: COLORS.deepWater,
     fontFamily: FONTS.bodyBold,
     fontSize: 15,
+    ...textGlow,
   },
 });

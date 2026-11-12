@@ -1,5 +1,6 @@
 import { COLORS } from './theme';
 
+export const CARD_BACK = require('../../assets/images/cards/gray_back.png');
 export const SUITS = ['C', 'D', 'H', 'S'];
 export const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 export const RANK_VALUES = Object.fromEntries(RANKS.map((rank, index) => [rank, index + 2]));

@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 // Expo knows computer's address to use with server's port
@@ -13,9 +14,29 @@ export const API_URL = getDefaultApiUrl();
 // login token
 const TOKEN_KEY = 'token';
 
-export const getToken = () => SecureStore.getItemAsync(TOKEN_KEY);
-export const setToken = (token: string) => SecureStore.setItemAsync(TOKEN_KEY, token);
-export const clearToken = () => SecureStore.deleteItemAsync(TOKEN_KEY);
+// SecureStore is native-only; browser localStorage is not encrypted.
+export const getToken = async () => {
+    if (Platform.OS === 'web') return globalThis.localStorage.getItem(TOKEN_KEY);
+    return SecureStore.getItemAsync(TOKEN_KEY);
+};
+
+export const setToken = async (token: string) => {
+    if (Platform.OS === 'web') {
+        globalThis.localStorage.setItem(TOKEN_KEY, token);
+        return;
+    }
+
+    return SecureStore.setItemAsync(TOKEN_KEY, token);
+};
+
+export const clearToken = async () => {
+    if (Platform.OS === 'web') {
+        globalThis.localStorage.removeItem(TOKEN_KEY);
+        return;
+    }
+
+    return SecureStore.deleteItemAsync(TOKEN_KEY);
+};
 
 // call backend with token attached
 export async function api(
