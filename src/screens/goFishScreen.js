@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Image,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -276,7 +275,7 @@ export default function GoFishScreen({ navigation }) {
             onPress={() => navigation?.goBack()}
             styles={styles}
           />
-          <Text style={styles.title}>Go Fish</Text>
+          <Text accessibilityRole="header" style={styles.title}>Go Fish</Text>
         </View>
 
         <Glass
@@ -332,7 +331,7 @@ export default function GoFishScreen({ navigation }) {
             <Text style={styles.pondCount}>{game.deck.length} cards left</Text>
           </View>
 
-          <View style={styles.messageBox} accessibilityLiveRegion="polite">
+          <View style={styles.messageBox} accessibilityLiveRegion="polite" accessibilityRole="text">
             <Text style={styles.messageText}>{game.message}</Text>
           </View>
 
@@ -403,18 +402,16 @@ export default function GoFishScreen({ navigation }) {
         visible={game.gameOver}
       >
         <View style={styles.gameOverOverlay}>
-          <View
-            accessibilityViewIsModal
-            style={styles.gameOverCard}
-          >
-            <Text style={styles.gameOverMessage}>{game.message}</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={newGame}
-              style={styles.playAgainButton}
-            >
-              <Text style={styles.playAgainText}>Play again</Text>
-            </Pressable>
+          <View accessibilityViewIsModal style={styles.gameOverCard}>
+            <Glass tint={AERO.modal} radius={28} styles={styles} style={styles.gameOverSurface}>
+              <Text accessibilityRole="header" style={styles.gameOverMessage}>{game.message}</Text>
+              <GlossButton
+                label="Play again"
+                onPress={newGame}
+                styles={styles}
+                style={styles.playAgainButton}
+              />
+            </Glass>
           </View>
         </View>
       </Modal>
@@ -438,6 +435,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
     alignItems: 'center',
+    flexGrow: 1,
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 30,
@@ -497,6 +495,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.glassEdge,
     borderRadius: 28,
     borderWidth: 1,
+    flex: 1,
+    minHeight: 520,
     overflow: 'hidden',
     padding: 16,
     width: '100%',
@@ -702,44 +702,26 @@ const styles = StyleSheet.create({
   gameOverOverlay: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 58, 92, 0.68)',
+    backgroundColor: 'rgba(3,40,70,0.6)',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   gameOverCard: {
-    alignItems: 'center',
-    backgroundColor: COLORS.pearl,
-    borderColor: COLORS.glassEdge,
-    borderRadius: 24,
-    borderWidth: 1,
     maxWidth: 420,
-    padding: 24,
     width: '100%',
-    ...RADII.organicA,
+  },
+  gameOverSurface: {
+    alignItems: 'center',
+    padding: 24,
   },
   gameOverMessage: {
-    color: COLORS.ink,
+    color: AERO.ink,
     fontFamily: FONTS.heading,
     fontSize: 26,
-    marginBottom: 10,
+    marginBottom: 16,
     textAlign: 'center',
-    ...textGlow,
   },
-  playAgainButton: {
-    alignItems: 'center',
-    backgroundColor: COLORS.deepWater,
-    borderRadius: 14,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: 24,
-    width: '100%',
-  },
-  playAgainText: {
-    color: COLORS.pearl,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 16,
-    ...textGlow,
-  },
+  playAgainButton: { width: '100%' },
   newGameButton: {
     marginTop: 14,
     paddingHorizontal: 18,

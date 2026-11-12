@@ -31,7 +31,7 @@ export default function LoadingScreen({ navigation }) {
   }, [navigation]);
 
   return (
-    <WaterBackground style={styles.root}>
+    <WaterBackground style={styles.root} tone="light">
       <Bubbles count={10} />
 
       <View style={styles.content}>

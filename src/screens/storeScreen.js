@@ -190,7 +190,7 @@ export default function StoreScreen({ navigation }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* title and points */}
         <View style={styles.header}>
-          <Text style={styles.title}>Store</Text>
+          <Text accessibilityRole="header" style={styles.title}>Store</Text>
           <View style={styles.pointsPill}>
             <Text style={styles.pointsText}>{loaded ? wallet.points : '…'} pts</Text>
           </View>
@@ -202,7 +202,11 @@ export default function StoreScreen({ navigation }) {
             {shown && <FishImage imageKey={shown.imageKey} width={120} />}
           </View>
           {shown && <Text style={styles.previewName}>{shown.name}</Text>}
-          {!!message && <Text style={styles.previewNote}>{message}</Text>}
+          {!!message && (
+            <Text accessibilityLiveRegion="polite" style={styles.previewNote}>
+              {message}
+            </Text>
+          )}
 
           {/* buy, use, in use, disabled */}
           <Button
@@ -311,7 +315,14 @@ const styles = StyleSheet.create({
 
   // title and points
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { color: COLORS.ink, fontFamily: FONTS.heading, fontSize: 28 },
+  title: {
+    color: COLORS.pearl,
+    fontFamily: FONTS.heading,
+    fontSize: 30,
+    textShadowColor: 'rgba(0,36,70,0.7)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
   pointsPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -329,6 +340,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 24,
     backgroundColor: COLORS.pearl,
+    borderColor: COLORS.glassEdge,
+    borderWidth: 1,
+    shadowColor: '#002446',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
   },
   previewImage: {
     width: '100%',
@@ -342,7 +360,18 @@ const styles = StyleSheet.create({
   previewNote: { color: COLORS.inkSoft, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center' },
 
   // fish grid
-  panel: { padding: 16, borderRadius: 24, backgroundColor: COLORS.pearl },
+  panel: {
+    padding: 16,
+    borderRadius: 24,
+    backgroundColor: COLORS.pearl,
+    borderColor: COLORS.glassEdge,
+    borderWidth: 1,
+    shadowColor: '#002446',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   panelTitle: { color: COLORS.ink, fontFamily: FONTS.bodyBold, fontSize: 18 },
   description: { color: COLORS.inkSoft, fontFamily: FONTS.body, fontSize: 13, marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
@@ -363,7 +392,7 @@ const styles = StyleSheet.create({
   btn: {
     height: 46,
     minWidth: 120,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,

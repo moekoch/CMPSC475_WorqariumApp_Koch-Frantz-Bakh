@@ -252,7 +252,7 @@ export default function SpadesScreen({ navigation }) {
             onPress={() => navigation?.goBack()}
             styles={styles}
           />
-          <Text style={styles.title}>Spades</Text>
+          <Text accessibilityRole="header" style={styles.title}>Spades</Text>
           <TopPill
             label="Rules  ?"
             accessibilityLabel="Rules and how to play"

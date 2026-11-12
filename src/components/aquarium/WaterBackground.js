@@ -1,15 +1,15 @@
-// Uses the shared ocean gradient by default, or an optional image for a screen.
+// Uses the shared ocean scene by default; light-tone screens can keep the loader gradient.
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image, StyleSheet, View } from 'react-native';
 import { GRADIENTS } from '../../constants/theme';
 
-export default function WaterBackground({ children, style, imageSource }) {
+export default function WaterBackground({ children, style, imageSource, tone = 'ocean' }) {
   return (
     <View style={[StyleSheet.absoluteFill, style]}>
-      {imageSource ? (
+      {imageSource || tone === 'ocean' ? (
         <Image
-          source={imageSource}
+          source={imageSource || require('../../../assets/images/backgrounds/gameOcean.jpg')}
           resizeMode="cover"
           style={StyleSheet.absoluteFill}
         />

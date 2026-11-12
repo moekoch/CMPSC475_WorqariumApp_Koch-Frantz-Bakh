@@ -85,7 +85,7 @@ export const COLORS = {
 
   // Life & accents
   coral: '#ff7a59',
-  coralDeep: '#e2572f',
+  coralDeep: '#B43B28',
   sunYellow: '#ffcc4d',
   seaweed: '#1f9d75',
   reefGreen: '#2bb088',

@@ -38,6 +38,8 @@ function Button({ label, onPress, variant = 'primary', busy = false, grow = fals
       onPress={onPress}
       disabled={busy}
       accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: busy }}
     >
       {busy ? <ActivityIndicator color={spinnerColor} /> : <Text style={textStyle}>{label}</Text>}
     </Pressable>
@@ -189,7 +191,7 @@ export default function SettingsScreen({ navigation }) {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Settings</Text>
+        <Text accessibilityRole="header" style={styles.title}>Settings</Text>
 
         {/* card that holds all settings */}
         <View style={styles.card}>
@@ -221,6 +223,7 @@ export default function SettingsScreen({ navigation }) {
                     key={option.value}
                     style={[styles.segment, selected && styles.segmentSelected]}
                     onPress={() => setVisibility(option.value)}
+                    accessibilityLabel={`Online visibility: ${option.label}`}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                   >
@@ -330,17 +333,27 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   title: {
-    color: COLORS.ink,
+    color: COLORS.pearl,
     fontFamily: FONTS.heading,
-    fontSize: 28,
+    fontSize: 30,
     marginBottom: 16,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,36,70,0.7)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   card: {
     backgroundColor: COLORS.pearl,
-    borderRadius: 24,
+    borderColor: COLORS.glassEdge,
+    borderRadius: 28,
+    borderWidth: 1,
     padding: 24,
     gap: 28,
+    shadowColor: '#002446',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 6,
   },
 
   // sections
@@ -358,7 +371,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: COLORS.foam,
   },
-  segment: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  segment: {
+    alignItems: 'center',
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 4,
+    paddingVertical: 10,
+  },
   segmentSelected: { backgroundColor: COLORS.deepWater },
   segmentText: { color: COLORS.ink, fontFamily: FONTS.body, fontSize: 14 },
   segmentTextSelected: { color: COLORS.pearl, fontFamily: FONTS.bodyBold },
@@ -366,7 +387,7 @@ const styles = StyleSheet.create({
   // buttons
   btn: {
     height: 50,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,

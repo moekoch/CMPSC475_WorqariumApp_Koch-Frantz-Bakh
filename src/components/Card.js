@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { CARD_IMAGES } from '../constants/gameConstants';
+import { CARD_IMAGES, SUIT_NAMES } from '../constants/gameConstants';
 
 export default function Card({
   card,
@@ -16,7 +16,15 @@ export default function Card({
   entering,
   layout,
 }) {
-  const image = <Image source={CARD_IMAGES[card.id]} resizeMode={resizeMode} style={imageStyle} />;
+  const image = (
+    <Image
+      accessibilityLabel={accessibilityLabel || `${card.rank} of ${SUIT_NAMES[card.suit]}`}
+      accessible={!onPress}
+      source={CARD_IMAGES[card.id]}
+      resizeMode={resizeMode}
+      style={imageStyle}
+    />
+  );
 
   if (!onPress) {
     return (

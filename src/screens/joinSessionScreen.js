@@ -5,6 +5,7 @@
 // centered card prompting the user to join, and the Worqarium bottom nav.
 
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import FishSprite from '../components/aquarium/FishSprite';
 import WaterBackground from '../components/aquarium/WaterBackground';
@@ -29,20 +30,43 @@ export default function JoinSessionScreen({ navigation }) {
 
       {/* Floating action icons in the top-right corner */}
       <View style={styles.iconStack}>
-        <Pressable style={styles.iconBtn} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          accessibilityHint="Opens app settings"
+          onPress={() => navigation?.navigate('settings')}
+          style={styles.iconBtn}
+          hitSlop={8}
+        >
           <Ionicons name="settings-outline" size={20} color={COLORS.ink} />
         </Pressable>
-        <Pressable style={styles.iconBtn} hitSlop={8}>
-          <Ionicons name="chatbubble-outline" size={18} color={COLORS.ink} />
-        </Pressable>
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={[styles.iconBtn, styles.disabledIconBtn]}
+        >
+          <Ionicons name="chatbubble-outline" size={18} color="rgba(255,255,255,0.64)" />
+        </View>
       </View>
 
       {/* Central prompt card and "Dive in!" action button[cite: 3] */}
       <View style={styles.cardWrap}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ready to join{'\n'}a session?</Text>
-          <Pressable style={styles.diveBtn} onPress={handleDiveIn}>
-            <Text style={styles.diveBtnText}>Dive in!</Text>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(255,255,255,0.28)', 'rgba(255,255,255,0.04)']}
+            style={styles.cardShine}
+          />
+          <Text style={styles.eyebrow}>WELCOME TO WORQARIUM</Text>
+          <Text accessibilityRole="header" style={styles.cardTitle}>Your reef is{'\n'}waiting.</Text>
+          <Text style={styles.cardDescription}>Meet your friends and explore the water together.</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dive in to the active session"
+            style={styles.diveBtn}
+            onPress={handleDiveIn}
+          >
+            <Text style={styles.diveBtnText}>Dive in <Text style={styles.arrow}>›</Text></Text>
           </Pressable>
         </View>
       </View>
@@ -63,18 +87,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(4,48,82,0.74)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.56)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowColor: '#002446',
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  disabledIconBtn: { opacity: 0.72 },
   cardWrap: {
     flex: 1,
     alignItems: 'center',
@@ -83,35 +110,61 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 290,
-    backgroundColor: COLORS.pearl || '#FFFFFF',
+    maxWidth: 360,
+    backgroundColor: 'rgba(6,66,112,0.72)',
+    borderColor: 'rgba(255,255,255,0.68)',
+    borderWidth: 1,
     borderRadius: 24,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#002446',
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    elevation: 9,
+  },
+  cardShine: { ...StyleSheet.absoluteFillObject, borderRadius: 24 },
+  eyebrow: {
+    color: '#B8F4DE',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.8,
+    marginBottom: 8,
   },
   cardTitle: {
     fontFamily: FONTS.heading,
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 30,
+    lineHeight: 36,
     textAlign: 'center',
-    color: COLORS.ink,
-    marginBottom: 20,
+    color: COLORS.pearl,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0,36,70,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+  cardDescription: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 22,
+    maxWidth: 260,
+    textAlign: 'center',
   },
   diveBtn: {
-    backgroundColor: COLORS.deepWater,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    backgroundColor: '#B8F4DE',
+    borderColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    paddingVertical: 13,
+    paddingHorizontal: 34,
+    borderRadius: 999,
   },
   diveBtnText: {
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
-    color: COLORS.pearl || '#FFFFFF',
+    color: COLORS.deepWater,
   },
+  arrow: { fontSize: 21 },
 });

@@ -151,8 +151,11 @@ const LoginScreen = ({
 					behavior={Platform.OS === 'ios' ? 'padding' : undefined}
 				>
 					<View style={styles.card}>
-						<Text style={styles.title}>Welcome back</Text>
-						<Text style={styles.subtitle}>Sign in to continue to your workspace.</Text>
+						<View style={styles.brandMark}>
+							<MaterialCommunityIcons name="waves" size={27} color={COLORS.pearl} />
+						</View>
+						<Text accessibilityRole="header" style={styles.title}>Welcome back</Text>
+						<Text style={styles.subtitle}>Dive back into your reef and meet your friends.</Text>
 
 						<Text style={styles.label}>Username</Text>
 						<TextInput
@@ -161,7 +164,7 @@ const LoginScreen = ({
 							onChangeText={setUsername}
 							placeholder="Enter your username"
 							placeholderTextColor={COLORS.inkFaint}
-							keyboardType="-address"
+							keyboardType="default"
 							autoCapitalize="none"
 							autoCorrect={false}
 							textContentType="username"
@@ -213,6 +216,7 @@ const LoginScreen = ({
 								disabled={busy}
 								accessibilityRole="link"
 								accessibilityLabel="Register here"
+								hitSlop={8}
 							>
 								<Text style={styles.registerLink}>Create one</Text>
 							</TouchableOpacity>
@@ -246,10 +250,15 @@ const styles = StyleSheet.create({
 		maxWidth: 440,
 		alignSelf: 'center',
 		padding: 28,
-		borderRadius: 24,
+		borderRadius: 28,
 		backgroundColor: COLORS.pearl,
 		borderWidth: 1,
 		borderColor: COLORS.glassEdge,
+		shadowColor: '#002446',
+		shadowOffset: { width: 0, height: 8 },
+		shadowOpacity: 0.24,
+		shadowRadius: 18,
+		elevation: 8,
 	},
 	brandMark: {
 		width: 48,
@@ -257,18 +266,20 @@ const styles = StyleSheet.create({
 		borderRadius: 14,
 		alignItems: 'center',
 		justifyContent: 'center',
-		backgroundColor: COLORS.coral,
-		marginBottom: 20,
+		backgroundColor: COLORS.deepWater,
+		borderColor: COLORS.skylight,
+		borderWidth: 1,
+		marginBottom: 18,
 	},
 	brandMarkText: { color: COLORS.pearl, fontFamily: FONTS.display, fontSize: 25 },
-	title: { color: COLORS.ink, fontFamily: FONTS.heading, fontSize: 28, fontWeight: 'bold'},
+	title: { color: COLORS.ink, fontFamily: FONTS.heading, fontSize: 30, fontWeight: 'bold'},
 	subtitle: { color: COLORS.inkSoft, fontFamily: FONTS.body, fontSize: 15, marginTop: 8, marginBottom: 28 },
 	label: { color: COLORS.ink, fontFamily: FONTS.bodyBold, fontSize: 14, marginBottom: 8 },
 	input: {
 		height: 50,
 		borderWidth: 1,
 		borderColor: COLORS.skylight,
-		borderRadius: 10,
+		borderRadius: 14,
 		backgroundColor: COLORS.foam,
 		color: COLORS.ink,
 		paddingHorizontal: 14,
@@ -279,7 +290,7 @@ const styles = StyleSheet.create({
 	error: { color: COLORS.coralDeep, fontFamily: FONTS.body, fontSize: 13, marginBottom: 14 },
 	primaryButton: {
 		height: 50,
-		borderRadius: 10,
+		borderRadius: 999,
 		alignItems: 'center',
 		justifyContent: 'center',
 		backgroundColor: COLORS.deepWater,

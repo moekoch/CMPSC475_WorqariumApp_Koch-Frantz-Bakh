@@ -8,7 +8,7 @@ export default function AvatarScreen({ navigation }) {
     <WaterBackground style={styles.root}>
       <View style={styles.content}>
         <View style={SCREEN_STYLES.placeholderCard}>
-          <Text style={SCREEN_STYLES.placeholderTitle}>My Fish</Text>
+          <Text accessibilityRole="header" style={SCREEN_STYLES.placeholderTitle}>My Fish</Text>
           <Text style={SCREEN_STYLES.placeholderDescription}>
             Your fish collection and avatar will appear here.
           </Text>

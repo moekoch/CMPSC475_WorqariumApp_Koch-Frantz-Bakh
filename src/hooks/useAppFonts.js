@@ -12,8 +12,7 @@ import {
 // Worqarium's two-typeface system:
 //  - Baloo 2  → headings / display: rounded, chunky, a little playful
 //  - Quicksand → body copy: friendly, soft, highly legible at small sizes
-// Call once near the app root (e.g. in app/_layout.tsx) and gate rendering
-// on `fontsLoaded`.
+// Call once near the app root so native and web routes share the same typefaces.
 export default function useAppFonts() {
   const [fontsLoaded] = useFonts({
     Baloo2_600SemiBold,

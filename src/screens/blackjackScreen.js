@@ -2,15 +2,15 @@ import { useState } from 'react';
 import {
   Image,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AERO, Glass, GlossButton, TopPill } from '../components/SpadesUI';
 import WaterBackground from '../components/aquarium/WaterBackground';
-import { COLORS, FONTS, RADII } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
 
 const CARD_BACK = require('../../assets/images/cards/gray_back.png');
 const SHARK = require('../../assets/images/fish/shark.png');
@@ -237,19 +237,21 @@ export default function BlackjackScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
+          <TopPill
+            label="‹ Games"
+            accessibilityLabel="Back to Games"
             onPress={() => navigation?.goBack?.()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>‹ Games</Text>
-          </Pressable>
-          <Text style={styles.title}>Blackjack</Text>
+            styles={styles}
+          />
+          <Text accessibilityRole="header" style={styles.title}>Blackjack</Text>
+          <View style={styles.headerSpacer} />
         </View>
-        <Text style={styles.message} accessibilityLiveRegion="polite">
+        <Glass tint={AERO.panel} radius={18} style={styles.messageBox} styles={styles}>
+          <Text style={styles.message} accessibilityRole="text" accessibilityLiveRegion="polite">
             {game.message}
           </Text>
-        <View style={styles.table}>
+        </Glass>
+        <Glass tint={AERO.panel} radius={28} style={styles.table} styles={styles}>
           <View style={styles.dealerArea}>
             <Image
               accessibilityLabel="Shark dealer"
@@ -288,24 +290,23 @@ export default function BlackjackScreen({ navigation }) {
 
             {game.phase === 'player' ? (
               <View style={styles.actions}>
-                <Pressable
-                  accessibilityRole="button"
+                <GlossButton
+                  label="Hit"
                   onPress={() => setGame((current) => hit(current))}
-                  style={[styles.actionButton, styles.primaryButton]}
-                >
-                  <Text style={styles.primaryButtonText}>Hit</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
+                  style={styles.actionButton}
+                  styles={styles}
+                />
+                <GlossButton
+                  label="Stand"
+                  variant="aqua"
                   onPress={() => setGame((current) => stand(current))}
-                  style={[styles.actionButton, styles.secondaryButton]}
-                >
-                  <Text style={styles.secondaryButtonText}>Stand</Text>
-                </Pressable>
+                  style={styles.actionButton}
+                  styles={styles}
+                />
               </View>
             ) : null}
           </View>
-        </View>
+        </Glass>
       </ScrollView>
       <Modal
         animationType="fade"
@@ -316,14 +317,15 @@ export default function BlackjackScreen({ navigation }) {
       >
         <View style={styles.gameOverOverlay}>
           <View accessibilityViewIsModal style={styles.gameOverCard}>
-            <Text style={styles.gameOverMessage}>{game.message}</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setGame(createGame())}
-              style={styles.playAgainButton}
-            >
-              <Text style={styles.playAgainText}>Play again</Text>
-            </Pressable>
+            <Glass tint={AERO.modal} radius={28} style={styles.gameOverSurface} styles={styles}>
+              <Text accessibilityRole="header" style={styles.gameOverMessage}>{game.message}</Text>
+              <GlossButton
+                label="Play again"
+                onPress={() => setGame(createGame())}
+                style={styles.playAgainButton}
+                styles={styles}
+              />
+            </Glass>
           </View>
         </View>
       </Modal>
@@ -333,113 +335,145 @@ export default function BlackjackScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 18 },
+  content: {
+    flexGrow: 1,
+    gap: 12,
+    paddingBottom: 24,
+    paddingHorizontal: 14,
+  },
   header: {
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 2,
+    position: 'relative',
   },
-  backButton: {
+  headerSpacer: {
     position: 'absolute',
-    left: 0,
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingRight: 12,
+    right: 0,
+    width: 96,
   },
-  backText: { color: COLORS.deepWater, fontFamily: FONTS.bodyBold, fontSize: 15 },
-  title: { color: COLORS.ink, fontFamily: FONTS.heading, fontSize: 26, fontWeight: 'bold' },
-  table: {
-    justifyContent: 'center',
-    padding: 18,
-    borderRadius: 24,
-    backgroundColor: 'rgba(120, 203, 255, 0.88)',
+  title: {
+    color: COLORS.pearl,
+    fontFamily: FONTS.heading,
+    fontSize: 30,
+    textShadowColor: AERO.shadow,
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  topPill: {
+    alignItems: 'center',
+    backgroundColor: AERO.panel,
+    borderColor: AERO.rim,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: COLORS.glassEdge,
+    height: 38,
+    justifyContent: 'center',
+    left: 0,
+    overflow: 'hidden',
+    position: 'absolute',
+    width: 96,
+  },
+  topPillText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 13 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  glass: {
+    borderColor: AERO.rim,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  gloss: { ...StyleSheet.absoluteFillObject },
+  buttonGradient: { ...StyleSheet.absoluteFillObject },
+  messageBox: { minHeight: 52, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8 },
+  table: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 360,
+    padding: 14,
+    width: '100%',
   },
   message: {
-    color: COLORS.black,
+    color: COLORS.pearl,
     fontFamily: FONTS.bodyBold,
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    marginBottom: 20,
-    fontWeight: 'bold',
+    textShadowColor: AERO.shadow,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   dealerArea: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 150,
-    marginBottom: 24,
+    minHeight: 124,
+    marginBottom: 12,
   },
-  shark: { width: 130, height: 130, marginRight: 10 },
+  shark: { width: 86, height: 100, marginRight: 10 },
   handContent: { flex: 1, minWidth: 0 },
   handHeading: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  handTitle: { color: COLORS.black, fontFamily: FONTS.heading, fontSize: 19, fontWeight: 'bold' },
-  score: { color: COLORS.abyss, fontFamily: FONTS.bodyBold, fontSize: 14, fontWeight: 'bold' },
+  handTitle: { color: COLORS.pearl, fontFamily: FONTS.heading, fontSize: 18 },
+  score: { color: AERO.mint, fontFamily: FONTS.bodyBold, fontSize: 13 },
   cardRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 2 },
-  card: { width: 64, height: 92, borderRadius: 7, marginRight: 8 },
+  card: { width: 56, height: 82, borderRadius: 7, marginRight: 7 },
   playerArea: {
-    padding: 14,
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(3,48,88,0.3)',
+    borderColor: AERO.rimSoft,
     borderRadius: 18,
-    backgroundColor: 'rgba(218, 239, 255, 0.75)',
+    borderWidth: 1,
+    padding: 12,
   },
-  playerCards: { minHeight: 102, alignItems: 'center' },
-  actions: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  playerCards: { minHeight: 90, alignItems: 'center' },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   actionButton: {
     flex: 1,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...RADII.organicB,
+    minHeight: 46,
   },
-  primaryButton: { backgroundColor: COLORS.deepWater },
-  secondaryButton: { backgroundColor: COLORS.pearl },
-  primaryButtonText: { color: COLORS.pearl, fontFamily: FONTS.bodyBold, fontSize: 16, fontWeight: 'bold' },
-  secondaryButtonText: { color: COLORS.black, fontFamily: FONTS.bodyBold, fontSize: 16, fontWeight: 'bold' },
+  glossButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    minHeight: 44,
+    overflow: 'hidden',
+    paddingHorizontal: 18,
+  },
+  glossButtonText: { fontFamily: FONTS.bodyBold, fontSize: 16, letterSpacing: 0.3 },
+  glossButtonSmall: { minHeight: 34, paddingHorizontal: 14 },
+  glossButtonTextSmall: { fontSize: 13 },
+  glossButtonShine: {
+    borderRadius: 999,
+    height: '46%',
+    left: 10,
+    position: 'absolute',
+    right: 10,
+    top: 2,
+  },
+  disabledButton: { opacity: 0.4 },
   gameOverOverlay: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 58, 92, 0.68)',
+    backgroundColor: 'rgba(3,40,70,0.6)',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   gameOverCard: {
-    alignItems: 'center',
-    backgroundColor: COLORS.pearl,
-    borderColor: COLORS.glassEdge,
-    borderRadius: 24,
-    borderWidth: 1,
     maxWidth: 420,
-    padding: 24,
     width: '100%',
-    ...RADII.organicA,
   },
+  gameOverSurface: { alignItems: 'center', padding: 24 },
   gameOverMessage: {
-    color: COLORS.ink,
+    color: AERO.ink,
     fontFamily: FONTS.heading,
     fontSize: 26,
-    marginBottom: 10,
+    marginBottom: 16,
     textAlign: 'center',
-    fontWeight: 'bold',
   },
-  playAgainButton: {
-    alignItems: 'center',
-    backgroundColor: COLORS.deepWater,
-    borderRadius: 14,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: 24,
-    width: '100%',
-  },
-  playAgainText: {
-    color: COLORS.pearl,
-    fontFamily: FONTS.bodyBold,
-    fontSize: 16,
-  },
+  playAgainButton: { width: '100%' },
 });

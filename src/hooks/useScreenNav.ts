@@ -44,7 +44,7 @@ export function useScreenNav() {
   return {
     navigate: (screenName: string, params?: Record<string, string>) => {
       const target = resolvePath(screenName, params);
-      if (target) router.push(target as any);
+      if (target) router.navigate(target as any);
     },
     replace: (screenName: string, params?: Record<string, string>) => {
       const target = resolvePath(screenName, params);

@@ -1,5 +1,5 @@
 // src/app/games.tsx
-// New route: /games — reached via router.push from the bottom navigation.
+// New route: /games — selected from the bottom navigation without adding history.
 import React from 'react';
 import { useScreenNav } from '../hooks/useScreenNav';
 import GamesScreen from '../screens/gamesScreen';

@@ -119,7 +119,14 @@ export default function ActiveSessionScreen({ navigation }) {
                     })
                 }
                 onPress={handlePress}
-                accessibilityLabel="Active session, tap to swim"
+                accessibilityRole="button"
+                accessibilityLabel={
+                    self
+                        ? `Active session with ${everyone.map((player) => player.username).join(', ')}`
+                        : 'Connecting to the active session'
+                }
+                accessibilityHint="Moves your fish to the tapped location"
+                accessibilityLiveRegion="polite"
             >
                 {/* status message */}
                 {!self && !error &&
@@ -129,7 +136,7 @@ export default function ActiveSessionScreen({ navigation }) {
                 }
                 {!!error && error !== 'unauthorized' && (
                     <Text
-                        accessibilityRole='alert'
+                        accessibilityRole="alert"
                         style={[
                             styles.message,
                             styles.error
@@ -168,9 +175,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
-    color: COLORS.ink,
+    color: COLORS.pearl,
+    textShadowColor: 'rgba(0,36,70,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  error: { color: COLORS.coralDeep },
+  error: {
+    backgroundColor: 'rgba(3,43,76,0.9)',
+    borderRadius: 12,
+    color: COLORS.pearl,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   fish: {
     position: 'absolute',
     left: 0,
