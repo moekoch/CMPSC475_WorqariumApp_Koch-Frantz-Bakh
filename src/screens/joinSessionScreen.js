@@ -3,30 +3,71 @@
 // Matches the "Join Session (Mobile)" Figma mockup: ocean background with
 // fish swimming freely, floating settings + chat icons top-right, a
 // centered card prompting the user to join, and the Worqarium bottom nav.
+// Tap the water to drop fish food; the fish chase it.
 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import FishSprite from '../components/aquarium/FishSprite';
+import FishFood from '../components/aquarium/FishFood';
+import SwimmingFish from '../components/aquarium/SwimmingFish';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import WorqariumNav from '../components/aquarium/WorqariumNav';
 import { FISH_KEYS } from '../constants/fishAssets';
 import { COLORS, FONTS } from '../constants/theme';
 
+const SCHOOL = [
+  { w: 90, speed: 36 },
+  { w: 60, speed: 52 },
+  { w: 56, speed: 44 },
+  { w: 72, speed: 40 },
+  { w: 92, speed: 32 },
+  { w: 40, speed: 58 },
+];
+
+const FOOD_LIFETIME = 5000; // ms before uneaten food disappears
+const MAX_FOOD = 8;
+
 export default function JoinSessionScreen({ navigation }) {
   const keyAt = (i) => (FISH_KEYS.length ? FISH_KEYS[i % FISH_KEYS.length] : null);
+
+  const [foods, setFoods] = useState([]);
+  const nextFoodId = useRef(0);
+
+  const dropFood = (e) => {
+    const { locationX, locationY } = e.nativeEvent;
+    const id = nextFoodId.current++;
+    setFoods((prev) => [...prev.slice(-(MAX_FOOD - 1)), { id, x: locationX, y: locationY }]);
+    setTimeout(() => setFoods((prev) => prev.filter((fd) => fd.id !== id)), FOOD_LIFETIME);
+  };
+
+  const eatFood = useCallback((id) => {
+    setFoods((prev) => prev.filter((fd) => fd.id !== id));
+  }, []);
 
   const handleDiveIn = () => navigation?.navigate('activeSession');
 
   return (
     <WaterBackground style={styles.root}>
-      {/* Swimming fish scattered around the card, matching the mockup atmosphere */}
-      <FishSprite fishKey={keyAt(0)} width={90} style={{ top: 90, left: 20 }} />
-      <FishSprite fishKey={keyAt(1)} width={60} style={{ top: 64, left: -8 }} mirror />
-      <FishSprite fishKey={keyAt(2)} width={56} style={{ top: 220, right: 12 }} />
-      <FishSprite fishKey={keyAt(3)} width={72} style={{ bottom: 170, left: 8 }} />
-      <FishSprite fishKey={keyAt(4)} width={92} style={{ bottom: 200, right: -6 }} mirror />
-      <FishSprite fishKey={keyAt(5)} width={40} style={{ bottom: 110, left: 120 }} />
+      {/* Tap layer: drops fish food. Rendered first so everything else sits on top of it */}
+      <Pressable style={StyleSheet.absoluteFill} onPressIn={dropFood} accessible={false} />
+
+      {/* Swimming fish: wander the whole screen, behind the card */}
+      {SCHOOL.map((s, i) => (
+        <SwimmingFish
+          key={i}
+          fishKey={keyAt(i)}
+          width={s.w}
+          speed={s.speed}
+          foods={foods}
+          onEat={eatFood}
+        />
+      ))}
+
+      {/* Fish food pellets */}
+      {foods.map((fd) => (
+        <FishFood key={fd.id} x={fd.x} y={fd.y} />
+      ))}
 
       {/* Floating action icons in the top-right corner */}
       <View style={styles.iconStack}>
@@ -49,8 +90,8 @@ export default function JoinSessionScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Central prompt card and "Dive in!" action button[cite: 3] */}
-      <View style={styles.cardWrap}>
+      {/* Central prompt card and "Dive in!" action button */}
+      <View style={styles.cardWrap} pointerEvents="box-none">
         <View style={styles.card}>
           <LinearGradient
             pointerEvents="none"
