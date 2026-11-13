@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import FishSprite from '../components/aquarium/FishSprite';
+import SwimmingFish from '../components/aquarium/SwimmingFish';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import WorqariumNav from '../components/aquarium/WorqariumNav';
 import { FISH_KEYS } from '../constants/fishAssets';
@@ -81,7 +82,71 @@ function SessionFish({ player, areaWidth, areaHeight, isSelf }) {
     );
 }
 
+const FISH_COUNT = 10;
+const CLOSE_IN_FRONT = false;
+
+// share = rough fraction of the school; size/speed are [min, max]
+const LAYERS = {
+  far:   { share: 0.30, size: [36, 55],   speed: [22, 32], opacity: 0.55 },
+  mid:   { share: 0.42, size: [56, 80],   speed: [34, 46], opacity: 0.9 },
+  close: { share: 0.28, size: [100, 150], speed: [50, 70], opacity: 1 },
+};
+const LAYER_RANK = { far: 0, mid: 1, close: 2 };
+
+const rand = (min, max) => min + Math.random() * (max - min);
+
+const shuffle = (arr) => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+function makeSchool(n) {
+  const close = Math.round(n * LAYERS.close.share);
+  const far = Math.round(n * LAYERS.far.share);
+  const mid = n - close - far;
+  const layers = shuffle([
+    ...Array(close).fill('close'),
+    ...Array(far).fill('far'),
+    ...Array(mid).fill('mid'),
+  ]);
+  return layers.map((layer, id) => {
+    const L = LAYERS[layer];
+    return {
+      id,
+      layer,
+      w: Math.round(rand(...L.size)),
+      speed: rand(...L.speed),
+      opacity: L.opacity,
+    };
+  });
+}
+
 export default function ActiveSessionScreen({ navigation }) {
+    const keyAt = (i) => (FISH_KEYS.length ? FISH_KEYS[i % FISH_KEYS.length] : null);
+    
+    const [school] = useState(() => makeSchool(FISH_COUNT));
+
+    const isFront = (s) => CLOSE_IN_FRONT && s.layer === 'close';
+      const backFish = school
+        .filter((s) => !isFront(s))
+        .sort((a, b) => LAYER_RANK[a.layer] - LAYER_RANK[b.layer]); // far drawn first
+      const frontFish = school.filter(isFront);
+    
+      const renderFish = (s) => (
+        <SwimmingFish
+          key={s.id}
+          fishKey={keyAt(s.id)}
+          width={s.w}
+          speed={s.speed}
+          opacity={s.opacity}
+          elevation={isFront(s) ? 20 : 0}
+        />
+      );
+
+
     // join session and get all fish
     const { self, players, error, move } = useSession(SESSION_ID);
 
@@ -146,6 +211,9 @@ export default function ActiveSessionScreen({ navigation }) {
                     </Text>
                 )}
 
+                {/* idle fish swim around the session */}
+                {backFish.map(renderFish)}
+
                 {/* one fish per player */}
                 {everyone.map((player) => (
                     <SessionFish
@@ -156,6 +224,8 @@ export default function ActiveSessionScreen({ navigation }) {
                         isSelf={player.id === self?.id}
                     />
                 ))}
+
+                {frontFish.map(renderFish)}
             </Pressable>
 
             {/* bottom nav bar */}
