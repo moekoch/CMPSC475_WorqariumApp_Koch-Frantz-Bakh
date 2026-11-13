@@ -22,6 +22,8 @@ export default function SwimmingFish({
   width,
   speed = 40,
   facesRight = true,
+  opacity = 1,      // new: far fish are faded
+  elevation = 0,    // new: lifts close fish above the card on Android
   foods = EMPTY,
   onEat,
   topInset = 40,
@@ -187,19 +189,22 @@ export default function SwimmingFish({
   const flip = facingRight !== facesRight;
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={{
+  <Animated.View
+    pointerEvents="none"
+    style={{
         position: 'absolute',
         top: 0,
         left: 0,
+        opacity,
+        zIndex: elevation,
+        elevation,
         transform: [
-          { translateX: f.x },
-          { translateY: f.y },
-          { rotate },
-          { scaleX: flip ? -1 : 1 },
+        { translateX: f.x },
+        { translateY: f.y },
+        { rotate },
+        { scaleX: flip ? -1 : 1 },
         ],
-      }}
+    }}
     >
       <Animated.View style={{ transform: [{ translateY: bobY }] }}>
         <FishSprite fishKey={fishKey} width={width} style={{ position: 'relative' }} />

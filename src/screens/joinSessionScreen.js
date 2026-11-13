@@ -3,7 +3,8 @@
 // Matches the "Join Session (Mobile)" Figma mockup: ocean background with
 // fish swimming freely, floating settings + chat icons top-right, a
 // centered card prompting the user to join, and the Worqarium bottom nav.
-// Tap the water to drop fish food; the fish chase it.
+// Fish swim at three depths (far / mid / close). Tap the water to drop
+// fish food; the fish chase it.
 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,21 +17,55 @@ import WorqariumNav from '../components/aquarium/WorqariumNav';
 import { FISH_KEYS } from '../constants/fishAssets';
 import { COLORS, FONTS } from '../constants/theme';
 
-const SCHOOL = [
-  { w: 90, speed: 36 },
-  { w: 60, speed: 52 },
-  { w: 56, speed: 44 },
-  { w: 72, speed: 40 },
-  { w: 92, speed: 32 },
-  { w: 40, speed: 58 },
-];
+const FISH_COUNT = 10;
+const CLOSE_IN_FRONT = false; // set false to keep every fish behind the card
 
-const FOOD_LIFETIME = 5000; // ms before uneaten food disappears
+// share = rough fraction of the school; size/speed are [min, max]
+const LAYERS = {
+  far:   { share: 0.30, size: [36, 55],   speed: [22, 32], opacity: 0.55 },
+  mid:   { share: 0.42, size: [56, 80],   speed: [34, 46], opacity: 0.9 },
+  close: { share: 0.28, size: [100, 150], speed: [50, 70], opacity: 1 },
+};
+const LAYER_RANK = { far: 0, mid: 1, close: 2 };
+
+const FOOD_LIFETIME = 9000; // ms before uneaten food disappears
 const MAX_FOOD = 8;
+
+const rand = (min, max) => min + Math.random() * (max - min);
+
+const shuffle = (arr) => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+function makeSchool(n) {
+  const close = Math.round(n * LAYERS.close.share);
+  const far = Math.round(n * LAYERS.far.share);
+  const mid = n - close - far;
+  const layers = shuffle([
+    ...Array(close).fill('close'),
+    ...Array(far).fill('far'),
+    ...Array(mid).fill('mid'),
+  ]);
+  return layers.map((layer, id) => {
+    const L = LAYERS[layer];
+    return {
+      id,
+      layer,
+      w: Math.round(rand(...L.size)),
+      speed: rand(...L.speed),
+      opacity: L.opacity,
+    };
+  });
+}
 
 export default function JoinSessionScreen({ navigation }) {
   const keyAt = (i) => (FISH_KEYS.length ? FISH_KEYS[i % FISH_KEYS.length] : null);
 
+  const [school] = useState(() => makeSchool(FISH_COUNT));
   const [foods, setFoods] = useState([]);
   const nextFoodId = useRef(0);
 
@@ -45,6 +80,25 @@ export default function JoinSessionScreen({ navigation }) {
     setFoods((prev) => prev.filter((fd) => fd.id !== id));
   }, []);
 
+  const isFront = (s) => CLOSE_IN_FRONT && s.layer === 'close';
+  const backFish = school
+    .filter((s) => !isFront(s))
+    .sort((a, b) => LAYER_RANK[a.layer] - LAYER_RANK[b.layer]); // far drawn first
+  const frontFish = school.filter(isFront);
+
+  const renderFish = (s) => (
+    <SwimmingFish
+      key={s.id}
+      fishKey={keyAt(s.id)}
+      width={s.w}
+      speed={s.speed}
+      opacity={s.opacity}
+      elevation={isFront(s) ? 20 : 0}
+      foods={foods}
+      onEat={eatFood}
+    />
+  );
+
   const handleDiveIn = () => navigation?.navigate('activeSession');
 
   return (
@@ -52,17 +106,8 @@ export default function JoinSessionScreen({ navigation }) {
       {/* Tap layer: drops fish food. Rendered first so everything else sits on top of it */}
       <Pressable style={StyleSheet.absoluteFill} onPressIn={dropFood} accessible={false} />
 
-      {/* Swimming fish: wander the whole screen, behind the card */}
-      {SCHOOL.map((s, i) => (
-        <SwimmingFish
-          key={i}
-          fishKey={keyAt(i)}
-          width={s.w}
-          speed={s.speed}
-          foods={foods}
-          onEat={eatFood}
-        />
-      ))}
+      {/* Far + mid fish: behind the card */}
+      {backFish.map(renderFish)}
 
       {/* Fish food pellets */}
       {foods.map((fd) => (
@@ -79,14 +124,14 @@ export default function JoinSessionScreen({ navigation }) {
           style={styles.iconBtn}
           hitSlop={8}
         >
-          <Ionicons name="settings-outline" size={20} color={COLORS.ink} />
+          <Ionicons name="settings-outline" size={20} color={COLORS.pearl} />
         </Pressable>
         <View
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           style={[styles.iconBtn, styles.disabledIconBtn]}
         >
-          <Ionicons name="chatbubble-outline" size={18} color="rgba(255,255,255,0.64)" />
+          <Ionicons name="chatbubble-outline" size={18} color={COLORS.pearl} />
         </View>
       </View>
 
@@ -111,6 +156,9 @@ export default function JoinSessionScreen({ navigation }) {
           </Pressable>
         </View>
       </View>
+
+      {/* Close fish: in front of the card, behind the nav */}
+      {frontFish.map(renderFish)}
 
       {/* Worqarium bottom navigation bar */}
       <WorqariumNav active="Home" navigation={navigation} />
