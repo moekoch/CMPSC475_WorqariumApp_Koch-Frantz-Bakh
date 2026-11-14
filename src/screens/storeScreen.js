@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, } from 'react-native';
 import FishSprite from '../components/aquarium/FishSprite';
+import ItemSprite from '../components/aquarium/ItemSprite';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import WorqariumNav from '../components/aquarium/WorqariumNav';
 import { FISH_KEYS } from '../constants/fishAssets';
+import { ITEM_KEYS } from '../constants/itemAssets';
 import { COLORS, FONTS } from '../constants/theme';
 import { api } from '../lib/api';
 
@@ -14,6 +16,10 @@ const DEFAULT_FISH_KEY = 'blueTang';
 const fishKeyFor = (imageKey) =>
   FISH_KEYS.includes(imageKey) ? imageKey : (FISH_KEYS[0] ?? null);
 
+// item image to draw for imageKey from server
+const itemKeyFor = (imageKey) =>
+  ITEM_KEYS.includes(imageKey) ? imageKey : (ITEM_KEYS[0] ?? null);
+
 // fish picture in box the size of fish
 function FishImage({ imageKey, width }) {
   return (
@@ -21,6 +27,22 @@ function FishImage({ imageKey, width }) {
       <FishSprite fishKey={fishKeyFor(imageKey)} width={width} style={{ top: 0, left: 0 }} />
     </View>
   );
+}
+
+// item picture in box the size of fish
+function ItemImage({ imageKey, width }) {
+  return (
+    <View style={{ width, height: width * 0.62 }}>
+      <ItemSprite itemKey={itemKeyFor(imageKey)} width={width} />
+    </View>
+  );
+}
+
+// picture of a fish or an item
+function ThingImage({ kind, imageKey, width }) {
+  return kind === 'item'
+    ? <ItemImage imageKey={imageKey} width={width} />
+    : <FishImage imageKey={imageKey} width={width} />;
 }
 
 // button used in preview card and popup
@@ -67,15 +89,23 @@ export default function StoreScreen({ navigation }) {
   // fish for sale from server
   const [avatars, setAvatars] = useState([]);
 
-  // user's points, owned fish, worn fish
-  const [wallet, setWallet] = useState({ points: 0, ownedAvatarIds: [], avatarId: null });
+  // items for sale from server
+  const [items, setItems] = useState([]);
+
+  // user's points, owned fish and items, worn fish
+  const [wallet, setWallet] = useState({
+    points: 0,
+    ownedAvatarIds: [],
+    ownedItemIds: [],
+    avatarId: null,
+  });
 
   // false until store data has loaded
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  // id of fish picked in grid
-  const [selectedId, setSelectedId] = useState(null);
+  // what is picked in the grids
+  const [selection, setSelection] = useState(null);
 
   // buy popup, waiting on server, messages for user
   const [popupOpen, setPopupOpen] = useState(false);
@@ -83,14 +113,16 @@ export default function StoreScreen({ navigation }) {
   const [buyError, setBuyError] = useState('');
   const [message, setMessage] = useState('');
 
-  // load fish and user's points when screen opens
+  // load fish, items, and user's points when screen opens
   useEffect(() => {
-    Promise.all([api('/api/avatars'), api('/api/users/me')])
-      .then(([fish, me]) => {
+    Promise.all([api('/api/avatars'), api('/api/items'), api('/api/users/me')])
+      .then(([fish, decorations, me]) => {
         setAvatars(fish);
+        setItems(decorations);
         setWallet({
           points: me.points,
           ownedAvatarIds: me.ownedAvatarIds,
+          ownedItemIds: me.ownedItemIds ?? [],
           avatarId: me.avatarId,
         });
         setLoaded(true);
@@ -107,29 +139,41 @@ export default function StoreScreen({ navigation }) {
     avatars.find((a) => a._id === wallet.avatarId) ??
     avatars.find((a) => a.imageKey === DEFAULT_FISH_KEY);
 
-  // fish picked in grid
-  const selected = avatars.find((a) => a._id === selectedId);
+  // kind of thing picked and the thing itself
+  const kind = selection?.kind;
+  const selected = selection
+    ? (kind === 'item' ? items : avatars).find((thing) => thing._id === selection.id)
+    : undefined;
 
-  // free fish belong to everyone
-  const isOwned = (avatar) => avatar.price === 0 || wallet.ownedAvatarIds.includes(avatar._id);
-  const isEquipped = (avatar) => avatar._id === equipped?._id;
-
-  // preview shows the picked fish, or the user's current fish if nothing is picked
-  const shown = selected ?? equipped;
-
-  // text under each tile
-  const tileLabel = (avatar) => {
-    if (isEquipped(avatar)) return 'In use';
-    if (isOwned(avatar)) return avatar.price === 0 ? 'Free' : 'Owned';
-    return `${avatar.price} pts`;
+  // free things belong to everyone
+  const isOwned = (thing, thingKind) => {
+    const ownedIds = thingKind === 'item' ? wallet.ownedItemIds : wallet.ownedAvatarIds;
+    return thing.price === 0 || ownedIds.includes(thing._id);
   };
 
-  // can user pay for picked fish
+  // only fish can be worn
+  const isEquipped = (avatar) => avatar._id === equipped?._id;
+
+  // is this exact tile picked
+  const isPicked = (thingKind, id) => selection?.kind === thingKind && selection?.id === id;
+
+  // preview shows picked fish or item, or user's current fish
+  const shown = selected ?? equipped;
+  const shownKind = selected ? kind : 'avatar';
+
+  // text under each tile
+  const tileLabel = (thing, thingKind) => {
+    if (thingKind === 'avatar' && isEquipped(thing)) return 'In use';
+    if (isOwned(thing, thingKind)) return thing.price === 0 ? 'Free' : 'Owned';
+    return `${thing.price} pts`;
+  };
+
+  // can user pay for picked thing
   const canAfford = selected ? wallet.points >= selected.price : false;
 
-  // pick fish
-  const handleSelect = (avatar) => {
-    setSelectedId(avatar._id);
+  // pick fish or item
+  const handleSelect = (thingKind, thing) => {
+    setSelection({ kind: thingKind, id: thing._id });
     setMessage('');
   };
 
@@ -139,19 +183,16 @@ export default function StoreScreen({ navigation }) {
     setPopupOpen(true);
   };
 
-  // buy picked fish
+  // buy picked fish or item
   const handleBuy = async () => {
     setBusy(true);
     setBuyError('');
     try {
-      const updated = await api(`/api/avatars/${selected._id}/purchase`, { method: 'POST' });
+      const route = kind === 'item' ? 'items' : 'avatars';
+      const updated = await api(`/api/${route}/${selected._id}/purchase`, { method: 'POST' });
 
-      // use new balance and owned fish from server
-      setWallet((prev) => ({
-        ...prev,
-        points: updated.points,
-        ownedAvatarIds: updated.ownedAvatarIds,
-      }));
+      // use new balance and owned things from server
+      setWallet((prev) => ({ ...prev, ...updated }));
 
       setPopupOpen(false);
       setMessage(`You bought ${selected.name}!`);
@@ -180,7 +221,8 @@ export default function StoreScreen({ navigation }) {
   // button under preview
   let action = { label: 'Buy', disabled: true, onPress: undefined };
   if (selected) {
-    if (!isOwned(selected)) action = { label: 'Buy', disabled: false, onPress: openBuy };
+    if (!isOwned(selected, kind)) action = { label: 'Buy', disabled: false, onPress: openBuy };
+    else if (kind === 'item') action = { label: 'Owned', disabled: true, onPress: undefined };
     else if (isEquipped(selected)) action = { label: 'In use', disabled: true, onPress: undefined };
     else action = { label: 'Use', disabled: false, onPress: handleEquip };
   }
@@ -196,10 +238,10 @@ export default function StoreScreen({ navigation }) {
           </View>
         </View>
 
-        {/* preview of the picked fish */}
+        {/* preview of the picked fish or item */}
         <View style={styles.preview}>
           <View style={styles.previewImage}>
-            {shown && <FishImage imageKey={shown.imageKey} width={120} />}
+            {shown && <ThingImage kind={shownKind} imageKey={shown.imageKey} width={120} />}
           </View>
           {shown && <Text style={styles.previewName}>{shown.name}</Text>}
           {!!message && (
@@ -208,7 +250,7 @@ export default function StoreScreen({ navigation }) {
             </Text>
           )}
 
-          {/* buy, use, in use, disabled */}
+          {/* buy, use, owned, in use, disabled */}
           <Button
             label={action.label}
             onPress={action.onPress}
@@ -233,19 +275,19 @@ export default function StoreScreen({ navigation }) {
           {/* one tile per fish from server */}
           <View style={styles.grid}>
             {avatars.map((avatar) => {
-              const picked = avatar._id === selectedId;
+              const picked = isPicked('avatar', avatar._id);
               return (
                 <Pressable
                   key={avatar._id}
                   style={[styles.tile, picked && styles.tileSelected]}
-                  onPress={() => handleSelect(avatar)}
+                  onPress={() => handleSelect('avatar', avatar)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${avatar.name}, ${tileLabel(avatar)}`}
+                  accessibilityLabel={`${avatar.name}, ${tileLabel(avatar, 'avatar')}`}
                   accessibilityState={{ selected: picked }}
                 >
                   <FishImage imageKey={avatar.imageKey} width={64} />
                   <Text style={styles.tileLabel} numberOfLines={1}>
-                    {tileLabel(avatar)}
+                    {tileLabel(avatar, 'avatar')}
                   </Text>
                 </Pressable>
               );
@@ -253,10 +295,35 @@ export default function StoreScreen({ navigation }) {
           </View>
         </View>
 
-        {/* items panel */}
+        {/* decorations for sale */}
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Items</Text>
-          <Text style={styles.description}>Coming soon</Text>
+          <Text style={styles.panelTitle}>Decorations</Text>
+          <Text style={styles.description}>Obtain profile decorations</Text>
+
+          {/* status messages */}
+          {!loaded && !loadError && <Text style={styles.description}>Loading decorations...</Text>}
+
+          {/* one tile per item from server */}
+          <View style={styles.grid}>
+            {items.map((item) => {
+              const picked = isPicked('item', item._id);
+              return (
+                <Pressable
+                  key={item._id}
+                  style={[styles.tile, picked && styles.tileSelected]}
+                  onPress={() => handleSelect('item', item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}, ${tileLabel(item, 'item')}`}
+                  accessibilityState={{ selected: picked }}
+                >
+                  <ItemImage imageKey={item.imageKey} width={64} />
+                  <Text style={styles.tileLabel} numberOfLines={1}>
+                    {tileLabel(item, 'item')}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
 
@@ -266,7 +333,7 @@ export default function StoreScreen({ navigation }) {
           <>
             <Text style={styles.popupTitle}>Buy {selected.name}?</Text>
             <View style={styles.popupImage}>
-              <FishImage imageKey={selected.imageKey} width={110} />
+              <ThingImage kind={kind} imageKey={selected.imageKey} width={110} />
             </View>
 
             {/* cost and balance */}
@@ -359,7 +426,7 @@ const styles = StyleSheet.create({
   previewName: { color: COLORS.ink, fontFamily: FONTS.bodyBold, fontSize: 15 },
   previewNote: { color: COLORS.inkSoft, fontFamily: FONTS.body, fontSize: 13, textAlign: 'center' },
 
-  // fish grid
+  // grids
   panel: {
     padding: 16,
     borderRadius: 24,
