@@ -21,6 +21,7 @@ const ROUTES: Record<string, string> = {
   games: '/games',
   blackjack: '/blackjack',
   goFish: '/go-fish',
+  goFishFriend: '/go-fish-friend',
   spades: '/spades',
   tictactoe: '/tictactoe',
   avatar: '/avatar',

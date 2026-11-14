@@ -71,57 +71,120 @@ export default function GamesScreen({ navigation }) {
         </View>
 
         <View style={[styles.gameList, { gap: compact ? 9 : 12 }]}>
-          {GAMES.map((game, index) => (
-            <Pressable
-              key={game.route}
-              accessibilityRole="button"
-              accessibilityLabel={`${game.title}. ${game.subtitle} ${game.detail} Play now`}
-              accessibilityHint={`Opens the ${game.title} game`}
-              onPress={() => navigation.navigate(game.route)}
-              style={({ pressed }) => [
-                styles.gameCard,
-                { minHeight: short ? 112 : compact ? 150 : 164 },
-                pressed && styles.pressed,
-              ]}
-            >
-              <LinearGradient
-                colors={['rgba(10,83,127,0.88)', 'rgba(3,43,76,0.92)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              {!compact && (
-                <View style={styles.cardTop}>
-                  <View style={[styles.numberBadge, { backgroundColor: game.accent[0] }]}>
-                    <Text style={styles.numberText}>{game.mark}</Text>
-                  </View>
-                  <Text style={styles.cardCategory}>{index === 2 ? 'TEAM PLAY' : 'QUICK PLAY'}</Text>
-                </View>
-              )}
+          {GAMES.map((game, index) => {
+            const isGoFish = game.route === 'goFish';
+            const CardContainer = isGoFish ? View : Pressable;
+            const cardProps = isGoFish
+              ? {
+                  style: [styles.gameCard, { minHeight: short ? 112 : compact ? 150 : 164 }],
+                }
+              : {
+                  accessibilityRole: 'button',
+                  accessibilityLabel: `${game.title}. ${game.subtitle} ${game.detail} Play now`,
+                  accessibilityHint: `Opens the ${game.title} game`,
+                  onPress: () => navigation.navigate(game.route),
+                  style: ({ pressed }) => [
+                    styles.gameCard,
+                    { minHeight: short ? 112 : compact ? 150 : 164 },
+                    pressed && styles.pressed,
+                  ],
+                };
 
-              <View style={styles.cardBody}>
-                <View style={styles.gameCopy}>
-                  <Text style={[styles.gameTitle, compact && styles.gameTitleCompact]}>
-                    {game.title}
-                  </Text>
-                  <Text style={styles.gameSubtitle}>{game.subtitle}</Text>
-                  {!compact && <Text style={styles.gameDetail}>{game.detail}</Text>}
-                  <View style={[styles.playButton, compact && styles.playButtonCompact]}>
-                    <Text style={styles.playText}>Play now</Text>
-                    <Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.playArrow}>›</Text>
-                  </View>
-                </View>
-                <Image
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                  source={game.image}
-                  resizeMode="contain"
-                  style={[styles.gameImage, compact && styles.gameImageCompact]}
+            return (
+              <CardContainer key={game.route} {...cardProps}>
+                <LinearGradient
+                  colors={['rgba(10,83,127,0.88)', 'rgba(3,43,76,0.92)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
                 />
-              </View>
-              <View pointerEvents="none" style={styles.cardShine} />
-            </Pressable>
-          ))}
+                {!compact && (
+                  <View style={styles.cardTop}>
+                    <View style={[styles.numberBadge, { backgroundColor: game.accent[0] }]}>
+                      <Text style={styles.numberText}>{game.mark}</Text>
+                    </View>
+                    <Text style={styles.cardCategory}>{index === 2 ? 'TEAM PLAY' : 'QUICK PLAY'}</Text>
+                  </View>
+                )}
+
+                <View style={styles.cardBody}>
+                  <View style={styles.gameCopy}>
+                    <Text style={[styles.gameTitle, compact && styles.gameTitleCompact]}>
+                      {game.title}
+                    </Text>
+                    <Text style={styles.gameSubtitle}>{game.subtitle}</Text>
+                    {!compact && <Text style={styles.gameDetail}>{game.detail}</Text>}
+                    {isGoFish ? (
+                      <>
+                        <View style={styles.gameActions}>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Play Go Fish"
+                            onPress={() => navigation.navigate(game.route)}
+                            style={({ pressed }) => [
+                              styles.playButton,
+                              compact && styles.playButtonCompact,
+                              styles.actionButton,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <Text numberOfLines={1} style={styles.playText}>Play now</Text>
+                            <Text
+                              accessibilityElementsHidden
+                              importantForAccessibility="no-hide-descendants"
+                              style={styles.playArrow}
+                            >
+                              ›
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Challenge a friend to Go Fish"
+                            accessibilityHint="Opens the friend challenge Go Fish game"
+                            onPress={() => navigation.navigate('goFishFriend')}
+                            style={({ pressed }) => [
+                              styles.challengeButton,
+                              compact && styles.playButtonCompact,
+                              styles.actionButton,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <Text numberOfLines={1} style={styles.challengeText}>Challenge</Text>
+                            <Text
+                              accessibilityElementsHidden
+                              importantForAccessibility="no-hide-descendants"
+                              style={styles.playArrow}
+                            >
+                              ›
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    ) : (
+                      <View style={[styles.playButton, compact && styles.playButtonCompact]}>
+                        <Text style={styles.playText}>Play now</Text>
+                        <Text
+                          accessibilityElementsHidden
+                          importantForAccessibility="no-hide-descendants"
+                          style={styles.playArrow}
+                        >
+                          ›
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Image
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    source={game.image}
+                    resizeMode="contain"
+                    style={[styles.gameImage, compact && styles.gameImageCompact]}
+                  />
+                </View>
+                <View pointerEvents="none" style={styles.cardShine} />
+              </CardContainer>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -211,7 +274,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
   },
   cardBody: { alignItems: 'center', flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
-  gameCopy: { flex: 1, paddingRight: 4 },
+  gameCopy: { flex: 1, minWidth: 0, paddingRight: 4 },
   gameTitle: {
     color: COLORS.pearl,
     fontFamily: FONTS.heading,
@@ -249,6 +312,26 @@ const styles = StyleSheet.create({
   playButtonCompact: { marginTop: 5, minHeight: 44 },
   playText: { color: '#0B4A74', fontFamily: FONTS.bodyBold, fontSize: 14 },
   playArrow: { color: '#0B4A74', fontFamily: FONTS.bodyBold, fontSize: 20, lineHeight: 22 },
+  gameActions: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: 5 },
+  actionButton: { marginTop: 0, minHeight: 44, paddingHorizontal: 10 },
+  challengeButton: {
+    alignItems: 'center',
+    backgroundColor: '#D7F2FF',
+    borderColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 15,
+  },
+  challengeText: {
+    color: '#0B4A74',
+    flexShrink: 0,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 13,
+  },
   gameImage: { height: 100, width: 100 },
   cardShine: {
     borderColor: 'rgba(255,255,255,0.09)',

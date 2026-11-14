@@ -9,7 +9,8 @@ function getDefaultApiUrl() {
 }
 
 // server address
-export const API_URL = getDefaultApiUrl();
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
+export const API_URL = configuredApiUrl || getDefaultApiUrl();
 
 // login token
 const TOKEN_KEY = 'token';

@@ -50,6 +50,11 @@ MONGODB_URI=mongodb+srv://<db_username>:<db_password>@worqcluster.xdkdjdc.mongod
 
 > **Note:** Never commit `.env` or expose your database credentials or JWT secret. Keep `.env.example` as a template without real credentials.
 
+For the mobile app, also set `EXPO_PUBLIC_API_URL` in its `.env` file to the
+backend URL used by all players. For local testing on multiple devices, use the
+computer's LAN IP (for example, `http://192.168.1.25:3000`), not `localhost`.
+Restart Expo after changing this value.
+
 ### 2. Start the Backend Server
 
 Before starting the web application, clone and configure the shared backend repository:
@@ -59,6 +64,12 @@ Before starting the web application, clone and configure the shared backend repo
 Follow the backend repository's setup instructions to configure its environment variables, install dependencies, connect to MongoDB, and start the server.
 
 The backend provides the API endpoints, authentication, and MongoDB database shared by the web and mobile applications. Swagger/OpenAPI documentation is also available through the backend.
+
+The Go Fish Challenge screen uses the backend's authenticated Socket.IO server
+for 1v1 matchmaking and authoritative game state. Both players must use the
+updated backend and join the Challenge queue while connected to that same server.
+The Challenge screen reports an explicit error if the connected backend does not
+acknowledge the matchmaking protocol.
 
 ### 3. Install Dependencies and Start the Mobile App
 
