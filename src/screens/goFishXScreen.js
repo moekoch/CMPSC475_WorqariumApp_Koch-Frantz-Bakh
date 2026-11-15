@@ -159,7 +159,7 @@ export default function GoFishScreen({ navigation }) {
 
   const cancelSearch = () => {
     socketRef.current?.emit('gofish:leave');
-    navigation?.goBack?.();
+    navigation?.replace?.('games');
   };
 
   const retryConnection = () => {
@@ -189,7 +189,7 @@ export default function GoFishScreen({ navigation }) {
           <TopPill
             label="‹ Games"
             accessibilityLabel="Back to Games"
-            onPress={() => navigation?.goBack()}
+            onPress={cancelSearch}
             styles={styles}
           />
           <Text accessibilityRole="header" style={styles.title}>Go Fish</Text>
@@ -328,7 +328,7 @@ export default function GoFishScreen({ navigation }) {
       </ScrollView>
       <Modal
         animationType="fade"
-        onRequestClose={() => navigation?.goBack?.()}
+        onRequestClose={cancelSearch}
         statusBarTranslucent
         transparent
         visible={isGameOver}
