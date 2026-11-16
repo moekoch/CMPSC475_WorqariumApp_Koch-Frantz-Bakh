@@ -66,10 +66,11 @@ Follow the backend repository's setup instructions to configure its environment 
 The backend provides the API endpoints, authentication, and MongoDB database shared by the web and mobile applications. Swagger/OpenAPI documentation is also available through the backend.
 
 The Go Fish Challenge screen uses the backend's authenticated Socket.IO server
-for 1v1 matchmaking and authoritative game state. Both players must use the
-updated backend and join the Challenge queue while connected to that same server.
-The Challenge screen reports an explicit error if the connected backend does not
-acknowledge the matchmaking protocol.
+for 1v1 matchmaking and authoritative game state. Players who join the Challenge
+queue appear as selectable opponents for other queued players on the same server.
+Selecting a player starts a game for both users. The Challenge screen reports an
+explicit error if the connected backend does not acknowledge the matchmaking
+protocol.
 
 ### 3. Install Dependencies and Start the Mobile App
 
