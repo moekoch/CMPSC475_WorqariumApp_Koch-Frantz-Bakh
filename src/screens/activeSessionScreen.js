@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import BubbleLoader from '../components/aquarium/BubbleLoader';
 import FishSprite from '../components/aquarium/FishSprite';
 import SwimmingFish from '../components/aquarium/SwimmingFish';
 import WaterBackground from '../components/aquarium/WaterBackground';
@@ -194,11 +195,9 @@ export default function ActiveSessionScreen({ navigation }) {
                 accessibilityLiveRegion="polite"
             >
                 {/* status message */}
-                {!self && !error &&
-                    <Text style={styles.message}>
-                        Diving in...
-                    </Text>
-                }
+                {!self && !error && (
+                    <BubbleLoader label="Diving in..." style={styles.loading} />
+                )}
                 {!!error && error !== 'unauthorized' && (
                     <Text
                         accessibilityRole="alert"
@@ -237,6 +236,12 @@ export default function ActiveSessionScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   area: { flex: 1, overflow: 'hidden' },
+  loading: {
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: '35%',
+  },
   message: {
     position: 'absolute',
     top: '45%',

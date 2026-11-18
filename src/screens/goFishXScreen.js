@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import { AERO, Glass, GlossButton, TopPill } from '../components/GoFishUI';
+import BubbleLoader from '../components/aquarium/BubbleLoader';
 import WaterBackground from '../components/aquarium/WaterBackground';
 import {
     CARD_BACK,
@@ -310,13 +311,19 @@ export default function GoFishScreen({ navigation }) {
             </>
           ) : (
             <View style={styles.waitingArea}>
-              <Text style={styles.messageText} accessibilityLiveRegion="polite">
-                {error || (isConnected
-                  ? isSearching
-                    ? 'Looking for another player…'
-                    : 'Waiting to join the game…'
-                  : 'Connecting to the game server…')}
-              </Text>
+              {error ? (
+                <Text style={styles.messageText} accessibilityLiveRegion="polite">
+                  {error}
+                </Text>
+              ) : (
+                <BubbleLoader
+                  label={isConnected
+                    ? isSearching
+                      ? 'Looking for another player...'
+                      : 'Waiting to join the game...'
+                    : 'Connecting to the game server...'}
+                />
+              )}
               <GlossButton
                 label={isConnected ? 'Cancel search' : 'Try again'}
                 onPress={isConnected ? cancelSearch : retryConnection}

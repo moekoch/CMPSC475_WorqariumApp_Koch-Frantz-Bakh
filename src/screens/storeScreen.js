@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, } from 'react-native';
+import BubbleLoader from '../components/aquarium/BubbleLoader';
 import FishSprite from '../components/aquarium/FishSprite';
 import ItemSprite from '../components/aquarium/ItemSprite';
 import WaterBackground from '../components/aquarium/WaterBackground';
@@ -259,72 +260,72 @@ export default function StoreScreen({ navigation }) {
           />
         </View>
 
-        {/* fish for sale */}
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Avatars</Text>
-          <Text style={styles.description}>Customize your avatar</Text>
-
-          {/* status messages */}
-          {!!loadError && (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {loadError}
-            </Text>
-          )}
-          {!loaded && !loadError && <Text style={styles.description}>Loading fish...</Text>}
-
-          {/* one tile per fish from server */}
-          <View style={styles.grid}>
-            {avatars.map((avatar) => {
-              const picked = isPicked('avatar', avatar._id);
-              return (
-                <Pressable
-                  key={avatar._id}
-                  style={[styles.tile, picked && styles.tileSelected]}
-                  onPress={() => handleSelect('avatar', avatar)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${avatar.name}, ${tileLabel(avatar, 'avatar')}`}
-                  accessibilityState={{ selected: picked }}
-                >
-                  <FishImage imageKey={avatar.imageKey} width={64} />
-                  <Text style={styles.tileLabel} numberOfLines={1}>
-                    {tileLabel(avatar, 'avatar')}
-                  </Text>
-                </Pressable>
-              );
-            })}
+        {!loaded && !loadError && <BubbleLoader label="Loading the store..." />}
+        {loadError && (
+          <View style={styles.panel}>
+            <Text accessibilityRole="alert" style={styles.error}>{loadError}</Text>
           </View>
-        </View>
+        )}
 
-        {/* decorations for sale */}
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Decorations</Text>
-          <Text style={styles.description}>Obtain profile decorations</Text>
+        {loaded && (
+          <>
+            {/* fish for sale */}
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Avatars</Text>
+              <Text style={styles.description}>Customize your avatar</Text>
 
-          {/* status messages */}
-          {!loaded && !loadError && <Text style={styles.description}>Loading decorations...</Text>}
+              {/* one tile per fish from server */}
+              <View style={styles.grid}>
+                {avatars.map((avatar) => {
+                  const picked = isPicked('avatar', avatar._id);
+                  return (
+                    <Pressable
+                      key={avatar._id}
+                      style={[styles.tile, picked && styles.tileSelected]}
+                      onPress={() => handleSelect('avatar', avatar)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${avatar.name}, ${tileLabel(avatar, 'avatar')}`}
+                      accessibilityState={{ selected: picked }}
+                    >
+                      <FishImage imageKey={avatar.imageKey} width={64} />
+                      <Text style={styles.tileLabel} numberOfLines={1}>
+                        {tileLabel(avatar, 'avatar')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
 
-          {/* one tile per item from server */}
-          <View style={styles.grid}>
-            {items.map((item) => {
-              const picked = isPicked('item', item._id);
-              return (
-                <Pressable
-                  key={item._id}
-                  style={[styles.tile, picked && styles.tileSelected]}
-                  onPress={() => handleSelect('item', item)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.name}, ${tileLabel(item, 'item')}`}
-                  accessibilityState={{ selected: picked }}
-                >
-                  <ItemImage imageKey={item.imageKey} width={64} />
-                  <Text style={styles.tileLabel} numberOfLines={1}>
-                    {tileLabel(item, 'item')}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+            {/* decorations for sale */}
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Decorations</Text>
+              <Text style={styles.description}>Obtain profile decorations</Text>
+
+              {/* one tile per item from server */}
+              <View style={styles.grid}>
+                {items.map((item) => {
+                  const picked = isPicked('item', item._id);
+                  return (
+                    <Pressable
+                      key={item._id}
+                      style={[styles.tile, picked && styles.tileSelected]}
+                      onPress={() => handleSelect('item', item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.name}, ${tileLabel(item, 'item')}`}
+                      accessibilityState={{ selected: picked }}
+                    >
+                      <ItemImage imageKey={item.imageKey} width={64} />
+                      <Text style={styles.tileLabel} numberOfLines={1}>
+                        {tileLabel(item, 'item')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* buy popup */}
