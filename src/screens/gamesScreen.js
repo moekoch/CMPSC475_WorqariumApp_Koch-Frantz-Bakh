@@ -73,8 +73,10 @@ export default function GamesScreen({ navigation }) {
         <View style={[styles.gameList, { gap: compact ? 9 : 12 }]}>
           {GAMES.map((game, index) => {
             const isGoFish = game.route === 'goFish';
-            const CardContainer = isGoFish ? View : Pressable;
-            const cardProps = isGoFish
+            const isSpades = game.route === 'spades';
+            const hasActions = isGoFish || isSpades;
+            const CardContainer = hasActions ? View : Pressable;
+            const cardProps = hasActions
               ? {
                   style: [styles.gameCard, { minHeight: short ? 112 : compact ? 150 : 164 }],
                 }
@@ -114,12 +116,12 @@ export default function GamesScreen({ navigation }) {
                     </Text>
                     <Text style={styles.gameSubtitle}>{game.subtitle}</Text>
                     {!compact && <Text style={styles.gameDetail}>{game.detail}</Text>}
-                    {isGoFish ? (
+                    {hasActions ? (
                       <>
                         <View style={styles.gameActions}>
                           <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Play Go Fish"
+                            accessibilityLabel={`Play ${game.title}`}
                             onPress={() => navigation.navigate(game.route)}
                             style={({ pressed }) => [
                               styles.playButton,
@@ -139,9 +141,9 @@ export default function GamesScreen({ navigation }) {
                           </Pressable>
                           <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="Challenge a friend to Go Fish"
-                            accessibilityHint="Opens the friend challenge Go Fish game"
-                            onPress={() => navigation.navigate('goFishFriend')}
+                            accessibilityLabel={`Challenge a friend to ${game.title}`}
+                            accessibilityHint={`Opens the friend challenge ${game.title} game`}
+                            onPress={() => navigation.navigate(isGoFish ? 'goFishFriend' : 'spadesFriend')}
                             style={({ pressed }) => [
                               styles.challengeButton,
                               compact && styles.playButtonCompact,

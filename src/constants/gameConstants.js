@@ -100,7 +100,7 @@ export const RULES_SECTIONS = [
   {
     title: 'The table',
     body:
-      'Four players, two teams. You (South) and your partner (North) play against West and East, who are the bots. Play moves clockwise.',
+      'Four seats, two teams. In a friend game, selected players take seats and bots fill any open seats. Play moves clockwise.',
   },
   {
     title: 'Dealing',
@@ -139,7 +139,7 @@ export const RULES_SECTIONS = [
   {
     title: 'Bot difficulty',
     body:
-      'Your partner and both opponents are bots, and you pick their skill level when a game starts. Easy bots play mostly at random. Medium bots follow sensible trick-taking habits. Hard bots count cards, remember who is out of a suit, try to bust nil bids, and avoid collecting bags. Start a new game to change the level.',
+      'Choose the skill level for any bot seats when a game starts. Easy bots play mostly at random. Medium bots favor low cards and avoid overtaking a partner. Hard bots try to overtake when needed and otherwise play the lowest available card.',
   },
   {
     title: 'Winning',

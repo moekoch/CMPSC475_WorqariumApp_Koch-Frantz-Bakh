@@ -133,7 +133,16 @@ export function Orb({ colors, size = 36, styles }) {
   );
 }
 
-export function PlayerBadge({ player, playerIndex, isTurn, isDealer, horizontal, styles }) {
+export function PlayerBadge({
+  player,
+  playerIndex,
+  isSelf,
+  isTurn,
+  isDealer,
+  horizontal,
+  mirror,
+  styles,
+}) {
   return (
     <View
       style={[
@@ -144,15 +153,17 @@ export function PlayerBadge({ player, playerIndex, isTurn, isDealer, horizontal,
     >
       <View style={styles.fishFrame}>
         <FishSprite
-          fishKey={PLAYER_FISH[playerIndex]}
+          fishKey={player.avatarKey || PLAYER_FISH[playerIndex]}
           width={40}
-          mirror={playerIndex === 3}
+          mirror={mirror ?? playerIndex === 3}
           style={styles.fish}
         />
       </View>
       <View style={horizontal ? styles.badgeTextH : styles.badgeTextV}>
         <Text style={styles.playerName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-          {SEATS[playerIndex]} · {SEAT_TAGS[playerIndex]}
+          {player.username
+            ? `${player.username}${isSelf ? ' (You)' : ''}`
+            : `${SEATS[playerIndex]} · ${SEAT_TAGS[playerIndex]}`}
         </Text>
         {horizontal ? (
           <Text style={styles.playerStats} numberOfLines={1}>

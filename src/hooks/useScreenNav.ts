@@ -23,6 +23,7 @@ const ROUTES: Record<string, string> = {
   goFish: '/go-fish',
   goFishFriend: '/go-fish-friend',
   spades: '/spades',
+  spadesFriend: '/spades-friend',
   tictactoe: '/tictactoe',
   avatar: '/avatar',
   store: '/store',

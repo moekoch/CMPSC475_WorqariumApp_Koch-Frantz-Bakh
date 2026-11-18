@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { FadeInUp } from 'react-native-reanimated';
 import { DIFFICULTY_LABELS, SUIT_NAMES } from '../constants/gameConstants';
 import { formatBid } from '../logic/cardUtils';
@@ -38,14 +38,22 @@ export default function GameTable({
   onCancelCard,
   newGame,
   nextHand,
+  selfSeat = 0,
+  ownTeam = 0,
+  onLeave,
   styles,
 }) {
-  const renderBadge = (playerIndex, horizontal = false) => (
+  const seatAt = (relativeSeat) => (selfSeat + relativeSeat) % 4;
+  const renderBadge = (playerIndex, horizontal = false, relativeSeat = playerIndex) => (
     <PlayerBadge
       player={game.players[playerIndex]}
       playerIndex={playerIndex}
+      mirror={relativeSeat === 3}
+      isSelf={playerIndex === selfSeat}
       horizontal={horizontal}
-      isTurn={(game.phase === 'playing' || game.phase === 'bidding') && game.turn === playerIndex}
+      isTurn={game.matchStatus !== 'finished' &&
+        (game.phase === 'playing' || game.phase === 'bidding') &&
+        game.turn === playerIndex}
       isDealer={game.dealer === playerIndex}
       styles={styles}
     />
@@ -58,7 +66,7 @@ export default function GameTable({
           <Text style={styles.scoreLabel}>Your team</Text>
           <Text style={styles.score}>{yourScore}</Text>
           <View style={styles.chip}>
-            <Text style={styles.chipText}>{game.bags[0]} bags</Text>
+            <Text style={styles.chipText}>{game.bags[ownTeam]} bags</Text>
           </View>
         </View>
         <View style={styles.scoreDivider} />
@@ -76,7 +84,7 @@ export default function GameTable({
           <Text style={styles.scoreLabel}>Them</Text>
           <Text style={styles.score}>{botScore}</Text>
           <View style={styles.chip}>
-            <Text style={styles.chipText}>{game.bags[1]} bags</Text>
+            <Text style={styles.chipText}>{game.bags[1 - ownTeam]} bags</Text>
           </View>
         </View>
       </Glass>
@@ -91,9 +99,9 @@ export default function GameTable({
           </Text>
         </Glass>
 
-        <View style={styles.northWrap}>{renderBadge(2, true)}</View>
+        <View style={styles.northWrap}>{renderBadge(seatAt(2), true, 2)}</View>
         <View style={styles.middleRow}>
-          <View style={styles.sideWrap}>{renderBadge(1)}</View>
+          <View style={styles.sideWrap}>{renderBadge(seatAt(1), false, 1)}</View>
 
           <Glass tint={AERO.well} radius={20} gloss={false} style={styles.trickArea} styles={styles}>
             {game.trick.map(({ playerIndex, card }) => (
@@ -105,13 +113,13 @@ export default function GameTable({
                 style={[
                   styles.trickImage,
                   { width: sizes.trickW, height: sizes.trickH },
-                  trickSeatStyle(playerIndex, sizes.trickW, sizes.trickH),
+                  trickSeatStyle((playerIndex - selfSeat + 4) % 4, sizes.trickW, sizes.trickH),
                 ]}
               />
             ))}
 
             {game.trick.length === 0 && game.phase === 'dealing' &&
-              (game.dealer === 0 ? (
+              (game.dealer === selfSeat ? (
                 <GlossButton
                   label="Deal"
                   onPress={onDeal}
@@ -123,7 +131,7 @@ export default function GameTable({
               ))}
 
             {game.phase === 'bidding' &&
-              (game.turn === 0 ? (
+              (game.turn === selfSeat ? (
                 <View style={styles.bidPanel}>
                   <Text style={styles.bidLabel}>YOUR BID</Text>
                   <View style={styles.stepper}>
@@ -163,7 +171,7 @@ export default function GameTable({
 
             {game.phase === 'playing' && game.trick.length === 0 && !selectedCard && (
               <Text style={styles.centerText}>
-                {game.turn === 0 ? 'Play a card' : 'Waiting for a card'}
+                {game.turn === selfSeat ? 'Play a card' : 'Waiting for a card'}
               </Text>
             )}
 
@@ -220,23 +228,31 @@ export default function GameTable({
             )}
           </Glass>
 
-          <View style={styles.sideWrap}>{renderBadge(3)}</View>
+          <View style={styles.sideWrap}>{renderBadge(seatAt(3), false, 3)}</View>
         </View>
-        <View style={styles.southWrap}>{renderBadge(0, true)}</View>
+        <View style={styles.southWrap}>{renderBadge(seatAt(0), true, 0)}</View>
 
-        {game.phase === 'roundOver' && (
+        {(game.phase === 'roundOver' || game.matchStatus === 'finished') && (
           <View style={styles.resultOverlay}>
             <Glass tint={AERO.panel} radius={24} style={styles.resultCard} styles={styles}>
               <Text
                 accessibilityRole="header"
                 style={[
                   styles.handOutcome,
-                  game.yourTeamMadeBid ? styles.handWon : styles.handMissed,
+                  (game.matchStatus !== 'finished' && game.yourTeamMadeBid)
+                    ? styles.handWon
+                    : styles.handMissed,
                 ]}
               >
-                {game.yourTeamMadeBid ? 'You won this hand!' : 'You missed your bid'}
+                {game.matchStatus === 'finished'
+                  ? game.message || 'This game has ended.'
+                  : gameOver
+                    ? (youWon ? 'Your team wins!' : 'The other team wins')
+                    : game.yourTeamMadeBid
+                      ? 'You won this hand!'
+                      : 'You missed your bid'}
               </Text>
-              {game.handResult.map((line, index) => (
+              {game.phase === 'roundOver' && game.handResult.map((line, index) => (
                 <Text key={`${index}-${line}`} style={styles.resultText}>
                   {line}
                 </Text>
@@ -247,6 +263,14 @@ export default function GameTable({
                 style={styles.resultButton}
                 styles={styles}
               />
+              {onLeave && (
+                <GlossButton
+                  label="Back to Games"
+                  variant="aqua"
+                  onPress={onLeave}
+                  styles={styles}
+                />
+              )}
             </Glass>
           </View>
         )}
