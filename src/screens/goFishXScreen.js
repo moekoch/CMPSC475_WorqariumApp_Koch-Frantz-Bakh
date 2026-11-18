@@ -1,21 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import { AERO, Glass, GlossButton, TopPill } from '../components/GoFishUI';
 import BubbleLoader from '../components/aquarium/BubbleLoader';
 import WaterBackground from '../components/aquarium/WaterBackground';
+import { FISH_KEYS, getFish } from '../constants/fishAssets';
 import {
-    CARD_BACK,
-    RANKS,
-    SUIT_NAMES,
+  CARD_BACK,
+  RANKS,
+  SUIT_NAMES,
 } from '../constants/gameConstants';
 import { COLORS, FONTS, RADII } from '../constants/theme';
 import { connectSocket, disconnectSocket } from '../lib/socket';
@@ -26,6 +28,11 @@ function getRankName(rank) {
   return RANK_NAMES[rank] || `${rank}s`;
 }
 
+function getFishSource(avatarKey) {
+  const fishKey = FISH_KEYS.includes(avatarKey) ? avatarKey : FISH_KEYS[0];
+  return getFish(fishKey).source;
+}
+
 function clearQueueAckTimer(timerRef) {
   if (timerRef.current) {
     clearTimeout(timerRef.current);
@@ -33,8 +40,16 @@ function clearQueueAckTimer(timerRef) {
   }
 }
 
-function requestMatchmaking(socket, timerRef, setError, setIsConnected, setIsSearching) {
+function requestMatchmaking(
+  socket,
+  timerRef,
+  protocolReadyRef,
+  setError,
+  setIsConnected,
+  setIsSearching,
+) {
   clearQueueAckTimer(timerRef);
+  protocolReadyRef.current = false;
   setIsConnected(true);
   setError('');
   setIsSearching(true);
@@ -45,6 +60,15 @@ function requestMatchmaking(socket, timerRef, setError, setIsConnected, setIsSea
   }, 8000);
   socket.emit('gofish:queue:join', (result) => {
     clearQueueAckTimer(timerRef);
+    if (result?.protocol !== 'select-opponent-v1') {
+      socket.emit('gofish:leave');
+      setError(
+        'This server still uses automatic Go Fish matchmaking. Update and restart the backend to choose an opponent.',
+      );
+      return;
+    }
+
+    protocolReadyRef.current = true;
     if (!result?.ok) {
       setError(result?.message || 'The game server rejected matchmaking.');
     }
@@ -57,7 +81,10 @@ export default function GoFishScreen({ navigation }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isSearching, setIsSearching] = useState(true);
   const [error, setError] = useState('');
+  const [availablePlayers, setAvailablePlayers] = useState([]);
+  const [challengingPlayerId, setChallengingPlayerId] = useState(null);
   const socketRef = useRef(null);
+  const matchmakingProtocolReadyRef = useRef(false);
   const queueAckTimerRef = useRef(null);
   const insets = useSafeAreaInsets();
 
@@ -69,6 +96,7 @@ export default function GoFishScreen({ navigation }) {
       requestMatchmaking(
         socket,
         queueAckTimerRef,
+        matchmakingProtocolReadyRef,
         setError,
         setIsConnected,
         setIsSearching,
@@ -79,14 +107,28 @@ export default function GoFishScreen({ navigation }) {
       setIsSearching(true);
       setGame(null);
     };
+    const handleLobby = (players) => {
+      setAvailablePlayers(Array.isArray(players) ? players : []);
+      setIsSearching(true);
+    };
     const handleState = (nextGame) => {
+      if (!matchmakingProtocolReadyRef.current) {
+        setError(
+          'This server started a game without selection. Update and restart the backend to choose an opponent.',
+        );
+        return;
+      }
+
       clearQueueAckTimer(queueAckTimerRef);
       setGame(nextGame);
+      setAvailablePlayers([]);
       setIsSearching(false);
       setSelectedRank(null);
+      setChallengingPlayerId(null);
       setError('');
     };
     const handleError = (payload) => {
+      setChallengingPlayerId(null);
       setError(payload?.message || 'The Go Fish server rejected that action.');
     };
     const handleDisconnect = () => {
@@ -104,6 +146,7 @@ export default function GoFishScreen({ navigation }) {
 
     socket.on('connect', joinQueue);
     socket.on('gofish:waiting', handleWaiting);
+    socket.on('gofish:lobby', handleLobby);
     socket.on('gofish:state', handleState);
     socket.on('gofish:error', handleError);
     socket.on('disconnect', handleDisconnect);
@@ -116,11 +159,13 @@ export default function GoFishScreen({ navigation }) {
       socket.emit('gofish:leave');
       socket.off('connect', joinQueue);
       socket.off('gofish:waiting', handleWaiting);
+      socket.off('gofish:lobby', handleLobby);
       socket.off('gofish:state', handleState);
       socket.off('gofish:error', handleError);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
       disconnectSocket();
+      matchmakingProtocolReadyRef.current = false;
       socketRef.current = null;
     };
   }, []);
@@ -137,18 +182,34 @@ export default function GoFishScreen({ navigation }) {
     setSelectedRank(null);
   };
 
+  const selectOpponent = (playerId) => {
+    if (!socketRef.current?.connected || challengingPlayerId) return;
+
+    setChallengingPlayerId(playerId);
+    setError('');
+    socketRef.current.emit('gofish:player:select', { playerId }, (result) => {
+      if (!result?.ok) {
+        setChallengingPlayerId(null);
+        setError('That player is no longer available. Choose someone else.');
+      }
+    });
+  };
+
   const findAnotherPlayer = () => {
     const socket = socketRef.current;
     setGame(null);
     setSelectedRank(null);
     setError('');
     setIsSearching(true);
+    setAvailablePlayers([]);
+    setChallengingPlayerId(null);
 
     if (socket?.connected) {
       socket.emit('gofish:leave');
       requestMatchmaking(
         socket,
         queueAckTimerRef,
+        matchmakingProtocolReadyRef,
         setError,
         setIsConnected,
         setIsSearching,
@@ -168,6 +229,7 @@ export default function GoFishScreen({ navigation }) {
       requestMatchmaking(
         socketRef.current,
         queueAckTimerRef,
+        matchmakingProtocolReadyRef,
         setError,
         setIsConnected,
         setIsSearching,
@@ -207,7 +269,7 @@ export default function GoFishScreen({ navigation }) {
               <View style={styles.opponentArea}>
                 <Image
                   accessibilityLabel={`${game.opponent.username}'s fish`}
-                  source={require('../../assets/images/fish/blueTang.png')}
+                  source={getFishSource(game.opponent.avatarKey)}
                   resizeMode="contain"
                   style={styles.sharkImage}
                 />
@@ -318,12 +380,42 @@ export default function GoFishScreen({ navigation }) {
               ) : (
                 <BubbleLoader
                   label={isConnected
-                    ? isSearching
-                      ? 'Looking for another player...'
-                      : 'Waiting to join the game...'
+                    ? availablePlayers.length
+                    ? 'Choose a player to start a game.'
+                    : isSearching
+                        ? 'Waiting for another player to join...'
+                        : 'Looking for players...'
                     : 'Connecting to the game server...'}
                 />
               )}
+              {availablePlayers.map((player) => (
+                <Pressable
+                  key={player.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Play Go Fish against ${player.username}`}
+                  disabled={Boolean(challengingPlayerId) || !isConnected}
+                  onPress={() => selectOpponent(player.id)}
+                  style={({ pressed }) => [
+                    styles.opponentButton,
+                    pressed && styles.opponentButtonPressed,
+                    (Boolean(challengingPlayerId) || !isConnected) &&
+                      styles.opponentButtonDisabled,
+                  ]}
+                >
+                  <Image
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                    source={getFishSource(player.avatarKey)}
+                    resizeMode="contain"
+                    style={styles.opponentButtonAvatar}
+                  />
+                  <Text style={styles.opponentButtonText}>
+                    {challengingPlayerId === player.id
+                      ? `Starting with ${player.username}…`
+                      : `Play ${player.username}`}
+                  </Text>
+                </Pressable>
+              ))}
               <GlossButton
                 label={isConnected ? 'Cancel search' : 'Try again'}
                 onPress={isConnected ? cancelSearch : retryConnection}
@@ -581,6 +673,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 18,
     paddingVertical: 36,
+  },
+  opponentButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: AERO.rim,
+    borderRadius: 16,
+    borderWidth: 1,
+    elevation: 3,
+    flexDirection: 'row',
+    gap: 25,
+    minHeight: 68,
+    paddingHorizontal: 16,
+    shadowColor: AERO.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+  },
+  opponentButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
+  },
+  opponentButtonDisabled: { opacity: 0.65 },
+  opponentButtonAvatar: {
+    height: 44,
+    width: 64,
+  },
+  opponentButtonText: {
+    color: AERO.ink,
+    flex: 1,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
   },
   handHeader: {
     alignItems: 'center',
